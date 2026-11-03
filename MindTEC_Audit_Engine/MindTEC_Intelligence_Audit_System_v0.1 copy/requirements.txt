@@ -1,0 +1,11 @@
+﻿pandas>=2.2
+numpy>=1.26
+openpyxl>=3.1
+streamlit
+scipy
+statsmodels
+scikit-learn
+duckdb
+plotly
+matplotlib
+pytest

@@ -16,3 +16,9 @@ cd Mindtec-/MindTEC_Intelligence_Audit_System_v0.1
 ```
 
 Para ejecutar el sistema, sigue las instrucciones de instalación del README del sistema. Los datos de entrada y los resultados de auditoría se mantienen fuera del repositorio.
+
+## Motor de auditoría actualizado
+
+La carpeta [MindTEC_Audit_Engine](MindTEC_Audit_Engine/) contiene el proyecto copiado desde esta PC. La interfaz Streamlit está en la subcarpeta **MindTEC_Intelligence_Audit_System_v0.1 copy**.
+
+Los datos y resultados se conservan en la copia local; se excluyen de GitHub junto con el entorno virtual y los archivos de respaldo.
