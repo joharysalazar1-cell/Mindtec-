@@ -65,5 +65,6 @@ data/reference/**
 # La carpeta config/rules puede contener reglas publicables; revisar manualmente.
 
 requirements-lock-local.txt
+config/sources.local.json
 
 requirements-lock-local.txt

@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "id": "observaciones",
+      "name": "Observaciones de campo",
+      "url_env": "MINDTEC_API_URL",
+      "key_env": "MINDTEC_API_KEY",
+      "format": "json",
+      "records_path": "data",
+      "auth_header": "Authorization",
+      "auth_prefix": "Bearer ",
+      "requires_auth": true,
+      "refresh_seconds": 300
+    }
+  ]
+}

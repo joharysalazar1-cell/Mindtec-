@@ -32,6 +32,7 @@ def select_data(label='Fuente de datos', key='source'):
     sheet = None
     if record.get('hojas'):
         sheet = st.selectbox('Hoja de Excel', record['hojas'], key=key+'_sheet')
+    record['hoja_seleccionada'] = sheet
     try:
         df = get_df(choice, sheet)
         if df.empty or not len(df.columns):
