@@ -1,1 +1,0 @@
-Aquí se documentarán reglas de negocio aprobadas. No activar umbrales arbitrarios como reglas definitivas.
