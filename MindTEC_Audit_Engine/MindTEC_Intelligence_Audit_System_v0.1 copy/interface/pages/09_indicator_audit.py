@@ -36,19 +36,25 @@ def option(label, columns, hints, optional=True):
     value = st.selectbox(label, opts, index=default)
     return None if value == '(ninguna)' else value
 
-file = st.file_uploader('Sube un CSV de observaciones (preferiblemente una fila por tienda × producto × período)', type=['csv'])
-if file is None:
-    st.info('Carga una base de observaciones para activar el diagnóstico. Las bases de facturas por sí solas no permiten auditar caras de estante o quiebres declarados.')
-    st.stop()
-
-with st.expander('Lectura del archivo', expanded=False):
-    sep = st.selectbox('Separador', [',', ';', '\t', '|'])
-    encoding = st.selectbox('Codificación', ['utf-8-sig', 'utf-8', 'latin-1'])
-try:
-    df = read_csv(file.getvalue(), sep, encoding)
-except Exception as exc:
-    st.error(f'No se pudo leer el CSV: {exc}')
-    st.stop()
+from src.services.workspace import select_data, sources
+from types import SimpleNamespace
+input_mode=st.radio('Origen de observaciones',['Fuentes de la sesión / API','CSV adicional'],horizontal=True)
+if input_mode=='Fuentes de la sesión / API':
+    df,source_id=select_data(key='advanced_source')
+    if df is None:st.stop()
+    file=SimpleNamespace(name=sources()[source_id]['nombre'])
+    st.caption('Fuente compartida con el resto del motor. Comprueba que representa observaciones de campo; la demo es sintética.')
+else:
+    file = st.file_uploader('Sube un CSV de observaciones (preferiblemente una fila por tienda × producto × período)', type=['csv'])
+    if file is None:
+        st.info('Selecciona una fuente de la sesión o carga un CSV adicional.');st.stop()
+    with st.expander('Lectura del archivo', expanded=False):
+        sep = st.selectbox('Separador', [',', ';', '\t', '|'])
+        encoding = st.selectbox('Codificación', ['utf-8-sig', 'utf-8', 'latin-1'])
+    try:
+        df = read_csv(file.getvalue(), sep, encoding)
+    except Exception as exc:
+        st.error(f'No se pudo leer el CSV: {exc}');st.stop()
 if df.empty or not len(df.columns):
     st.error('El archivo no contiene registros utilizables.')
     st.stop()
