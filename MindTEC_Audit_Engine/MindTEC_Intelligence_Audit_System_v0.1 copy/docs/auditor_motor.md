@@ -43,3 +43,9 @@ python -m unittest discover -s tests -v
 ```
 
 Las pruebas cubren claves ambiguas, cruce externo, tolerancias, división por cero, ratios, flujo de interfaz, lectura API y conservación de fuentes ante fallos. No certifican equivalencia con el dashboard: eso exige fuentes del mismo corte y fórmulas comparables.
+
+## Carga manual y archivo local
+
+La opción **Cargar bases de datos** admite varios CSV, XLSX o XLS. Selecciona el tipo de fuente, periodo, procedencia y unidad de observación. La revisión de columnas muestra compatibilidad estructural y campos pendientes; no certifica que los valores sean correctos. También permite inspeccionar fechas frente a un corte.
+
+Con **Guardar original y periodo en historial local** se conserva el archivo original por hash y una ficha de versión en data/staging/uploads, excluido de Git. Puedes recuperarlo desde esa misma pantalla tras reiniciar la sesión. Los archivos con el mismo nombre y distinto contenido se distinguen por hash. El historial vive en el equipo o volumen del servidor; GitHub no transporta estas bases ni sustituye una copia de respaldo.

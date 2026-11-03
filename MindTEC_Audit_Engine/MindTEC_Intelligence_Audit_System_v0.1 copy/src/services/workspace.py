@@ -24,7 +24,7 @@ def get_df(key, sheet=None):
 def select_data(label='Fuente de datos', key='source'):
     data = sources()
     if not data:
-        st.info('Primero carga archivos en Recepción de datos.')
+        st.info('Primero incorpora archivos en Cargar bases de datos.')
         return None, None
     ids = list(data)
     choice = st.selectbox(label, ids, format_func=lambda i: data[i]['nombre'] + ' · ' + i[:8], key=key)

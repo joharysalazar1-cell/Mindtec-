@@ -7,7 +7,7 @@ st.set_page_config(page_title='MindTEC Intelligence System',page_icon='📊',lay
 ROOT=Path(__file__).resolve().parent
 PAGES={
     'Fuentes automáticas':('11_connections.py','render'),
-    'Recepción de datos':('01_data_upload.py','pagina_recepcion_datos'),
+    'Cargar bases de datos':('01_data_upload.py','pagina_recepcion_datos'),
     'Auditoría de la base':('10_audit_workspace.py','audit'),
     'Contraste de fuentes':('10_audit_workspace.py','contrast'),
     'Indicadores verificables':('10_audit_workspace.py','indicators'),
@@ -63,7 +63,7 @@ choice=st.sidebar.radio('Navegación',['Inicio']+list(PAGES))
 if choice=='Inicio':
     st.title('MindTEC · Auditoría y análisis independiente')
     st.caption('Fuentes → integridad → indicadores → contraste → hallazgos')
-    st.info('Carga tus bases y referencias en Recepción de datos. Luego revisa su integridad, calcula indicadores con denominador explícito y contrasta fuentes equivalentes.')
+    st.info('Carga tus bases y referencias en Cargar bases de datos. Luego revisa su integridad, calcula indicadores con denominador explícito y contrasta fuentes equivalentes.')
     st.markdown('1. **Auditoría de la base:** claves, faltantes y duplicados.\n2. **Indicadores verificables:** presencia, caras o quiebres con base explícita.\n3. **Contraste de fuentes:** dashboard, facturas, declaraciones o referencias externas.\n4. **Resultados y hallazgos:** evidencia, interpretación y resolución del analista.')
     st.warning('Las fuentes originales no se modifican. Los resultados viven en la sesión: descarga el expediente para conservarlos. No confundas compra documentada con venta total o participación de mercado.')
 else:
