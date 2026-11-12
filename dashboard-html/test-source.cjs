@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
-for(const name of ['executive.js','visual.js','trace-visual.js','statistics-core.js','statistics-visual.js'])new vm.Script(fs.readFileSync(path.join(__dirname,name),'utf8'),{filename:name});
+for(const name of ['executive.js','visual.js','trace-visual.js','statistics-core.js','statistics-visual.js','statistics-periods.js'])new vm.Script(fs.readFileSync(path.join(__dirname,name),'utf8'),{filename:name});
 const template=fs.readFileSync(path.join(__dirname,'executive-template.html'),'utf8');
 assert(template.includes('__DATA__')&&template.includes('__SCRIPT__'),'Template slots missing');
 assert(!template.includes('"envios":['),'Private source rows embedded in template');

@@ -70,3 +70,20 @@ node dashboard-html/test-statistics-dashboard.cjs
 ```
 
 La primera verifica métricas, casos límite, p exactos y ajuste Holm sin datos privados. La segunda requiere el HTML local construido. Los 43 conteos pareados, p exactos y ajustes Holm se contrastaron además con una implementación independiente en Python; la cola χ² de un grado de libertad se contrastó con `math.erfc`.
+
+
+## Vistas mensual, anual y total
+
+Los controles propios de Estadística permiten elegir vista mensual (un mes o todos los meses disponibles), anual o total, además de año, KPI, categoría y conjunto de marcas. Sustituyen el filtro de mes superior solo en esta sección. El resto del dashboard conserva sus filtros.
+
+Los resúmenes anuales y totales agrupan los pares marca×mes originales y recalculan sesgo, MAE y RMSE desde sus diferencias. No promedian RMSE mensuales ni reconstruyen el KPI comercial anual. Cada par pesa una vez; las marcas pueden repetirse entre meses, por lo que el resumen sigue siendo descriptivo. Se muestra la cobertura real: para 2026 solo están disponibles septiembre y octubre.
+
+El gráfico temporal usa un solo KPI y categoría; conserva signo, unidades, base de pares y huecos sin imputar. Con un solo año se muestran puntos sin sugerir tendencia interanual. La vista total conserva la evolución mensual y añade el resumen acumulado. El gráfico de diferencias muestra hasta 20 pares de mayor discrepancia absoluta, con acceso al origen y CSV completo.
+
+McNemar conserva la comparación pareada septiembre/octubre; no se suman sus p-valores o estadísticos para crear un resultado anual/total.
+
+```powershell
+node dashboard-html/test-periods.cjs
+```
+
+La prueba verifica seis combinaciones de periodo/comparador, fórmulas sobre pares originales, cobertura, filtros temporales propios y equivalencia anual/total cuando solo hay un año.
