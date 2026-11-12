@@ -1,0 +1,6 @@
+# Direct pins from PyPI; see ../catalog.json.
+pytest==9.2.0
+hypothesis==6.170.15
+ruff==0.17.4
+pip-audit==2.10.1
+cyclonedx-bom==8.0.1

@@ -1,0 +1,6 @@
+/resolution-windows-py314.json
+/.venv/
+/__pycache__/
+/outputs/
+/sbom*.json
+/audit*.json

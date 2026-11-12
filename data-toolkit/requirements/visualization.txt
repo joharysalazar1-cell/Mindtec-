@@ -1,0 +1,4 @@
+# Direct pins from PyPI; see ../catalog.json.
+seaborn==0.13.2
+altair==6.3.0
+folium==0.20.0

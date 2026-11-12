@@ -1,0 +1,4 @@
+# Direct pins from PyPI; see ../catalog.json.
+pingouin==0.7.0
+lifelines==0.30.3
+scikit-posthocs==0.17.1
