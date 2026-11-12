@@ -1,0 +1,15 @@
+# Private audit inputs and generated HTML must stay local.
+data/
+private/
+dist/
+reports/
+__pycache__/
+*.pyc
+*.json
+*.jsonl
+*.xlsx
+*.xls
+*.csv
+*.zip
+*.html
+!executive-template.html

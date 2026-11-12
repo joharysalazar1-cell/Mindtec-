@@ -1,0 +1,10 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
+for(const name of ['executive.js','visual.js','trace-visual.js'])new vm.Script(fs.readFileSync(path.join(__dirname,name),'utf8'),{filename:name});
+const template=fs.readFileSync(path.join(__dirname,'executive-template.html'),'utf8');
+assert(template.includes('__DATA__')&&template.includes('__SCRIPT__'),'Template slots missing');
+assert(!template.includes('"envios":['),'Private source rows embedded in template');
+const build=fs.readFileSync(path.join(__dirname,'build.py'),'utf8');
+assert(build.includes('--data-dir')&&build.includes('trace-ledger'),'Private input argument or lineage section missing');
+const ignore=fs.readFileSync(path.join(__dirname,'.gitignore'),'utf8');
+assert(ignore.includes('dist/')&&ignore.includes('*.json')&&ignore.includes('*.xlsx'),'Private outputs are not ignored');
+console.log('Source syntax, template slots, lineage and private-data exclusions: OK');
