@@ -13,3 +13,5 @@ __pycache__/
 *.zip
 *.html
 !executive-template.html
+
+!statistics-section.html

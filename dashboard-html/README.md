@@ -48,3 +48,25 @@ En el corte local se verificaron 633 vistas, 1.320 detalles KPI, 54 fichas, 25 d
 La configuración actual de cliente no demuestra la vigencia histórica por marca/canal/mes. Los pesos, aplicabilidad, exclusiones y componentes que la plataforma no exportó siguen identificados como pendientes. Las facturas documentan compras parciales, no ventas ni mercado total. El piloto no acredita una muestra probabilística de toda La Paz.
 
 El cierre de validación integral requiere acreditar fuente, regla, universo, independencia, versión, exactitud y coincidencia para cada resultado. Esta interfaz hace visibles esos requisitos; no los reemplaza por un porcentaje de confianza inventado.
+
+
+## Diferencias, sesgo, MAE y RMSE
+
+La sección Estadística compara publicación y auditoría histórica (o cálculo operativo con sus límites) usando Δ = D − C, sesgo = media(Δ), MAE = media(|Δ|) y RMSE = raíz(media(Δ²)). Conserva grupos de un KPI, categoría y mes; no promedia unidades distintas. Incluye número de pares, diferencias de cada marca, fórmulas y trazabilidad. Las reproducciones aritméticas del panel se excluyen del comparador operativo para evitar circularidad. Son estadísticos descriptivos, no porcentajes de confianza.
+
+## Chi-cuadrado y presencia pareada
+
+Septiembre y octubre observan las mismas tiendas. Se utiliza McNemar para presencia binaria pareada, con χ² = (b−c)²/(b+c), gl = 1 y p exacto bilateral binomial como principal. El p asintótico se muestra únicamente con al menos 25 discordantes como regla conservadora de implementación. No se usa Pearson para tratar las dos visitas de una tienda como independientes ni se fabrican conteos a partir de porcentajes publicados.
+
+Los grupos incluyen solo stickers únicos, presencia binaria y elegibilidad en ambos meses. Se muestran la tabla 2×2, las exclusiones y las variables de cada tienda. Holm ajusta la familia completa antes de filtrar. En el corte actual hay 43 grupos pareados; las pruebas no se extienden a los 12 KPI sin sus conteos oficiales. La interpretación es exploratoria: supone tiendas independientes entre sí y medición equivalente entre olas; no prueba causalidad ni representatividad de ciudad.
+
+Referencias: [McNemar en statsmodels](https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html) y [chi-cuadrado de Pearson en NIST](https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/chistest.htm).
+
+Comprobaciones adicionales:
+
+```powershell
+node dashboard-html/test-statistics-core.cjs
+node dashboard-html/test-statistics-dashboard.cjs
+```
+
+La primera verifica métricas, casos límite, p exactos y ajuste Holm sin datos privados. La segunda requiere el HTML local construido. Los 43 conteos pareados, p exactos y ajustes Holm se contrastaron además con una implementación independiente en Python; la cola χ² de un grado de libertad se contrastó con `math.erfc`.
