@@ -2,6 +2,10 @@
 
 Código y documentación del sistema de inteligencia y auditoría de datos.
 
+## Bibliotecas y repositorios de datos
+
+El [toolkit de datos](data-toolkit/README.md) reúne 51 bibliotecas en 10 perfiles, un catálogo de repositorios oficiales y un lock con hashes para Windows x64 / Python 3.14. Consulta la [biblioteca de referencias](data-toolkit/BIBLIOTECAS.md) para elegir herramientas según la tarea.
+
 ## Sistema de auditoría v0.1
 
 Consulta la instalación y el uso en [el README del sistema](MindTEC_Audit_Engine/MindTEC_Intelligence_Audit_System_v0.1/README.md).
