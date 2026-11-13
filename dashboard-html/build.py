@@ -35,6 +35,29 @@ for key in sorted(needed):
         rows.append(row)
     groups.append({'key':key,'rows':rows})
 d['trace']={'pairs':pairs,'groups':groups,'records':base['records'],'visits':base['visitas'],'invoices':base['currentAudit']['items'],'links':{r['id']:{'invoices':r['operativo']['lineas_factura_relacionadas'],'stores':r['operativo']['tiendas_relacionadas'],'faces':r['operativo']['registros_caras_relacionados']} for r in available}}
+registry={}
+def register_brand(name,source,month=None):
+    name=str(name or '').strip()
+    if not name:return None
+    if name not in registry:registry[name]={'name':name,'sources':set(),'months':set(),'kpiRows':0,'invoiceRows':0,'records':0}
+    entry=registry[name];entry['sources'].add(source)
+    if month:entry['months'].add(month)
+    return entry
+for r in d['results']:register_brand(r['brand'],'Panel publicado',r['month'])['kpiRows']+=1
+for r in base['records']:
+    b=register_brand(r.get('marca'),'Colecta normalizada',r['mes'])
+    if b:b['records']+=1
+for r in base['currentAudit']['items']:
+    names={str(r.get(k) or '').strip() for k in ['Marca analítica','Marca original','Marca']}
+    for name in names:
+        b=register_brand(name,'Facturas: original o analítica',r['Mes'])
+        if b:b['invoiceRows']+=1
+for r in base['kpis']:register_brand(r[2],'Catálogo histórico KPI')
+for key in base['reconstructionSources']:
+    cat,brand,month=key.split('|');register_brand(brand,'Insumos históricos',month)
+d['brandRegistry']=[{**r,'sources':sorted(r['sources']),'months':sorted(r['months'])} for r in sorted(registry.values(),key=lambda r:r['name'].casefold())]
+s=s.replace('<section id="indicadores">','<section id="marcas-disponibles"><span class="section-label">CATÁLOGO COMPLETO DE FUENTES</span><h2>Todas las marcas disponibles en la base</h2><div class="card"><div class="filters"><label>Buscar en todas las marcas<input id="brand-catalog-search" placeholder="Nombre de marca"></label><button id="export-brand-catalog">Exportar catálogo completo</button></div><div id="all-brand-table"></div></div></section><section id="indicadores">')
+s=s.replace('<a href="#indicadores">Comparación de marcas</a>','<a href="#marcas-disponibles">Todas las marcas</a><a href="#indicadores">Comparación de marcas</a>')
 s=s.replace('<a href="#hallazgos">Hallazgos y evidencia</a>','<a href="#trazabilidad">Trazabilidad directa</a><a href="#hallazgos">Hallazgos y evidencia</a>')
 s=s.replace('<a href="#hallazgos">Hallazgos</a>','<a href="#trazabilidad">Trazabilidad</a><a href="#hallazgos">Hallazgos</a>')
 s=s.replace('<section id="hallazgos">','<section id="trazabilidad"><span class="section-label">DEL RESULTADO AL REGISTRO ORIGINAL</span><h2>Trazabilidad y reconstrucción</h2><div id="trace-reconstruction"></div><div class="card"><h3>Qué puede reconstruirse en esta selección</h3><p>Abre un KPI para recorrer fórmula, universo relacionado, variables y líneas de factura. La aplicabilidad oficial desconocida sigue identificada.</p><div class="filters"><label>Buscar KPI, tienda, sticker o ID<input id="trace-search" placeholder="Ej. 10000023 o Perfect Store"></label><button id="trace-export-inputs">Exportar universos y variables</button></div><div id="trace-ledger"></div></div><div class="card"><h3>Tiendas y variables de origen</h3><div id="trace-inputs"></div></div></section><section id="hallazgos">')
@@ -44,10 +67,16 @@ s=s.replace('<a href="#trazabilidad">Trazabilidad directa</a>','<a href="#estadi
 s=s.replace('<a href="#trazabilidad">Trazabilidad</a>','<a href="#estadistica">Estadística</a><a href="#trazabilidad">Trazabilidad</a>')
 s=s.replace('</style>',' .trace-flow{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.trace-flow span{padding:8px 12px;background:#eef2f8;border:1px solid #dce4f0;border-radius:6px;font-size:12px}.trace-flow span:first-child{background:#20324e;color:white} #trazabilidad .cards{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){#trazabilidad .cards{grid-template-columns:repeat(2,minmax(0,1fr))}} </style>',1)
 s=s.replace('</style>','.period-delta-row{display:grid;grid-template-columns:140px minmax(0,1fr) 85px;gap:12px;align-items:center;margin:10px 0;font-size:12px}.period-delta-track{height:14px;position:relative;background:linear-gradient(to right,#edf1f8 49.8%,#8a98ae 49.8%,#8a98ae 50.2%,#edf1f8 50.2%);border-radius:3px}.period-delta-track i{position:absolute;top:2px;height:10px;border-radius:3px}#stats-trend{margin-top:22px}@media(max-width:600px){.period-delta-row{grid-template-columns:95px minmax(0,1fr) 65px}} </style>',1)
+s=s.replace('<div id="stats" class="cards"></div>','<div id="stats" class="cards"></div><section class="card" id="source-presence"></section><input id="source-sku" type="hidden" value="">')
+from perfect_store_integration import integrate_perfect_store
+s=integrate_perfect_store(s,d,p)
 payload=json.dumps(d,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c')
 script=(HERE/'executive.js').read_text(encoding='utf-8')+'\n'+(HERE/'visual.js').read_text(encoding='utf-8')+'\n'+(HERE/'trace-visual.js').read_text(encoding='utf-8')
 script+='\n'+(HERE/'statistics-core.js').read_text(encoding='utf-8')+'\n'+(HERE/'statistics-visual.js').read_text(encoding='utf-8')
 script+='\n'+(HERE/'statistics-periods.js').read_text(encoding='utf-8')
+script+='\n'+(HERE/'filter-aware.js').read_text(encoding='utf-8')+'\n'+(HERE/'aloe-catalog.js').read_text(encoding='utf-8')
+script+='\n'+(HERE/'all-brands.js').read_text(encoding='utf-8')
+script+='\n'+(HERE/'perfect-store-dashboard.js').read_text(encoding='utf-8')
 s=s.replace('__DATA__',payload).replace('__SCRIPT__',script)
 s=re.sub(r'<p><a href="MindTEC_Dashboard_informacion_recuperada_2026-11-12.html".*?</p>','<p>La trazabilidad directa se encuentra integrada en este mismo HTML.</p>',s,flags=re.S)
 s=s.replace('El enlace requiere conservar ambos HTML en la misma carpeta, tal como vienen en el ZIP.','Los registros y filas de origen se consultan desde la sección Trazabilidad.')

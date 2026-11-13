@@ -87,3 +87,37 @@ node dashboard-html/test-periods.cjs
 ```
 
 La prueba verifica seis combinaciones de periodo/comparador, fórmulas sobre pares originales, cobertura, filtros temporales propios y equivalencia anual/total cuando solo hay un año.
+
+
+## Inventario de datos y filtros sin falsos ceros
+
+Al cambiar de marca se ajusta una categoría incompatible con sus publicaciones, conservando el mes para no ocultar falta de cobertura temporal. La vista distingue filas KPI publicadas, productos documentados y registros de colecta. Si no existe denominador de contraste, muestra «No evaluable» en lugar de 0/0.
+
+El panel Datos existentes lista SKU, productos, meses y filas de origen. La disponibilidad histórica ignora el mes/categoría activos y se identifica expresamente. Una marca con facturas pero sin KPI publicado conserva su evidencia sin recibir porcentajes de otra marca. En Aloe se conservan los nombres de cada fuente y se muestran coincidencias para revisión, sin homologar automáticamente Aloe Vera Premium, Aloe Tai, La Case, Original HB o Tai.
+
+```powershell
+node dashboard-html/test-filters.cjs
+node dashboard-html/test-aloe.cjs
+```
+
+Las pruebas comprueban cambio de categoría en las 64 marcas con publicación, presencia documental sin KPI y siete combinaciones de marca/mes relacionadas con Aloe. Las pruebas requieren el corte privado local.
+
+
+## Todas las marcas disponibles
+
+El selector y la tabla de catálogo reúnen todos los nombres no vacíos del panel publicado, la colecta normalizada, las marcas originales y analíticas de factura, los KPI históricos y los grupos de insumos. El corte contiene 175 nombres registrados, incluidas variantes de escritura; no se afirma que sean 175 marcas homologadas distintas. Cada nombre conserva procedencia, meses y conteos de registros. La búsqueda de factura puede coincidir con su marca original o analítica, sin transferir KPI entre etiquetas distintas. Una marca sin publicación conserva sus datos fuente.
+
+Verificar con `node dashboard-html/test-all-brands.cjs` después de construir el HTML local.
+
+
+## Perfect Store por tienda
+
+El dashboard incorpora un corte operativo preparado de Perfect Store en sus tarjetas y una sección propia. Los filtros de marca, categoría y mes se sincronizan con el explorador de componentes y preguntas originales, integrado en el HTML sin conexión. Los datos y resultados históricos permanecen intactos: la reconstrucción nueva muestra su fecha, su naturaleza operativa y las diferencias con el panel de ese corte. No convierte pendientes en cero ni aplica resultados a marcas documentadas exclusivamente en facturas.
+
+El cálculo por tienda divide cumplimientos entre componentes aplicables. El resultado de marca promedia puntajes de tiendas elegibles. Una respuesta pendiente impide declarar completo el resultado; un componente no aplicable se excluye del denominador. El código conserva la regla de SKU núcleo y acceso al frío como operativas: la configuración actual no certifica su vigencia histórica.
+
+Para incluir el módulo, prepare en la carpeta privada `Perfect_Store_reconstruido_2026-11-13/resumen_por_marca_mes.json` y `MindTEC_Perfect_Store_reconstruido.html`. `build_perfect_store_report.py --data-dir RUTA_PRIVADA` construye el explorador a partir del detalle, resumen, manifiesto y reglas privados preparados. Después ejecute `build.py --data-dir RUTA_PRIVADA` y `node dashboard-html/test-perfect-store.cjs`. La integración es opcional cuando no existe ese corte.
+
+`reconstruct_perfect_store.py --data-dir RUTA_PRIVADA --downloads-dir RUTA_EXPORTACIONES` permite volver a preparar el corte con los cuestionarios y Excel de Scan, cubos mensuales y capturas oficiales conservadas. Requiere también la configuración observada, el universo de exclusiones aprobado, la base histórica y el archivo privado `captura_panel_perfect_store.json` con los comparadores capturados. Los códigos SKU entre versiones no se homologan por coincidencia numérica. Los IDs internos del Excel no se confunden con envioKobo.
+
+Solo se publican generadores, plantillas vacías, lógica y pruebas. No se suben cuestionarios, capturas con resultados, ubicaciones, identificadores de visitas, archivos fuente ni HTML generados.
