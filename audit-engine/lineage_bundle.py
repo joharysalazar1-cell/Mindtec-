@@ -8,10 +8,19 @@ import argparse,json
 from pathlib import Path
 import engine
 
+PARENT_NAMES={'kpis':'resultados_12_KPI.json','kpi_scope':'fuentes_y_alcance.json','perfect_store_details':'detalle_por_tienda.json','perfect_store_manifest':'manifiesto.json'}
+
 def build(kpi_dir,perfect_store_dir):
  kp=Path(kpi_dir);ps=Path(perfect_store_dir)
  paths={'kpis':kp/'resultados_12_KPI.json','kpi_scope':kp/'fuentes_y_alcance.json','perfect_store_details':ps/'detalle_por_tienda.json','perfect_store_manifest':ps/'manifiesto.json'}
- raw={role:p.read_bytes() for role,p in paths.items()};data={role:engine.load_json_bytes(v) for role,v in raw.items()}
+ raw={role:p.read_bytes() for role,p in paths.items()}
+ return project(raw,{role:p.name for role,p in paths.items()})
+
+def project(raw,names=None):
+ """Use captured immutable parent bytes, without rereading mutable input files."""
+ names=PARENT_NAMES if names is None else names
+ if set(raw)!=set(PARENT_NAMES) or set(names)!=set(PARENT_NAMES):raise ValueError('Exactly four declared lineage parents required')
+ data={role:engine.load_json_bytes(v) for role,v in raw.items()}
  sets=[];set_map={};answers=[];answer_map={};kpis=[];details=[]
  def intern(value,table,index):
   key=engine.canonical(value)
@@ -26,7 +35,7 @@ def build(kpi_dir,perfect_store_dir):
    refs=[intern({'ruta':s['ruta'],'valor':s['valor']},answers,answer_map) for s in c.get('fuentes',[])]
    projected['components'].append({'name':c['componente'],'state':c['estado'],'value':c['valor'],'weight':c['peso'],'answer_refs':refs})
   details.append(projected)
- return {'schema':'mindtec-lineage-dependencies/1','parent_files':{role:{'filename':path.name,'sha256':engine.sha(raw[role])} for role,path in paths.items()},'parent_bytes_verified_on_server':False,'projection_scope':'All fields consumed by lineage/1.0.0; descriptions and unrelated display fields are omitted. Original files remain separate.','kpi_scope':data['kpi_scope'],'perfect_store_manifest':data['perfect_store_manifest'],'invoice_ref_sets':sets,'answer_pool':answers,'kpis':kpis,'perfect_store':details}
+ return {'schema':'mindtec-lineage-dependencies/1','parent_files':{role:{'filename':names[role],'sha256':engine.sha(raw[role])} for role in raw},'parent_bytes_verified_on_server':False,'projection_scope':'All fields consumed by lineage/1.0.0; descriptions and unrelated display fields are omitted. Original files remain separate.','kpi_scope':data['kpi_scope'],'perfect_store_manifest':data['perfect_store_manifest'],'invoice_ref_sets':sets,'answer_pool':answers,'kpis':kpis,'perfect_store':details}
 
 def unpack(bundle):
  if bundle.get('schema')!='mindtec-lineage-dependencies/1':raise ValueError('Dependency bundle schema required')
