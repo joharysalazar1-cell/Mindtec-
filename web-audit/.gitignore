@@ -1,0 +1,8 @@
+/source/
+/dist/
+/.openai/
+/baseline-manifest.json
+/test-results.json
+/legacy.sha256
+/node_modules/
+.env*
