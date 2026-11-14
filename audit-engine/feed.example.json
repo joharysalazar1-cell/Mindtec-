@@ -1,0 +1,14 @@
+{
+  "schema": "mindtec-scan-feed/1",
+  "enabled": false,
+  "url": "https://scan.example.org/api/exportar/normalizado.json",
+  "destination": "C:/MindTEC/private/incoming/scan_actual.json",
+  "policy": "C:/MindTEC/private/policy.json",
+  "audit_runtime": "C:/MindTEC/private/runtime",
+  "runtime": "C:/MindTEC/private/feed",
+  "auth": {"kind": "bearer_env", "token_env": "MINDTEC_SCAN_READ_TOKEN"},
+  "timeout": 15,
+  "max_seconds": 60,
+  "max_bytes": 25000000,
+  "interval": 300
+}
