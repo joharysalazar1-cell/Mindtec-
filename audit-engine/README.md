@@ -59,3 +59,11 @@ La señal `stop.request` en el runtime del supervisor impide levantar observador
 El supervisor rechaza registrar un feed deshabilitado; su runtime, intervalo, entrada y política deben coincidir con la configuración del observador Scan. La validación no lee credenciales ni hace peticiones. No se activa una conexión real ni se crea una cuenta al descargar este código. Consulte [el acceso pendiente](ACCESO_PENDIENTE_SCAN.md) para coordinarlo con el custodio técnico.
 
 Este paquete no incluye sincronización autenticada automática con una web ni cotejo XLSX dentro de esa web. La integridad y la concordancia numérica no certifican veracidad documental, representatividad ni probabilidad de fraude.
+
+## Lector ZIP portátil en preparación
+
+`xlsx-zip.mjs` recupera partes internas del XLSX mediante APIs web estándar, sin acceso a archivos, red ni dependencias Node en el módulo. Verifica cabeceras locales y centrales, nombres, descriptores, tamaños, límites de expansión y CRC. Admite ZIP de un solo disco con partes almacenadas o Deflate; rechaza ZIP64, cifrado, enlaces simbólicos, rutas inseguras y codificaciones heredadas no ASCII. No interpreta XML ni celdas y todavía no está conectado a la web publicada.
+
+`node --test test-xlsx-zip.mjs` ejecuta sus pruebas sintéticas. `python verify_xlsx_zip_web.py archivo.xlsx --output private/zip-parity.json` compara el SHA-256 de cada parte descomprimida contra el lector independiente de Python. Ese contraste demuestra igualdad de bytes, no validación de los indicadores ni autenticidad del documento.
+
+Referencias del lector: [especificación ZIP de PKWARE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) y [APIs web de Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/web-standards/).
