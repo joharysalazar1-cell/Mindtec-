@@ -1,5 +1,7 @@
 private/
 runtime/
+/PLAN.md
+/README-PUBLIC.md
 __pycache__/
 .env*
 .dev.vars*
