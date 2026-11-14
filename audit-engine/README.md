@@ -44,7 +44,7 @@ La política `mindtec-invoice-policy/1` necesita `version`. `line_arithmetic` e 
 
 ## Supervisión en Windows
 
-`supervisor.py` permite trabajos `scan`, `invoice`, `lineage` y `feed`, con scripts fijos y rutas absolutas. Rechaza runtimes compartidos y configuraciones de alimentación no enlazadas con el mismo observador Scan. No ejecuta comandos de shell proporcionados por el JSON.
+`supervisor.py` permite trabajos `scan`, `invoice`, `lineage`, `feed` y `outbox`, con scripts fijos y rutas absolutas. Rechaza runtimes compartidos, configuraciones de alimentación no enlazadas con el mismo observador Scan y bandejas no enlazadas con sus tres observadores fuente. No ejecuta comandos de shell proporcionados por el JSON.
 
 El supervisor comprueba sus propios handles de proceso. Solo una salida terminal comprobada activa su reinicio con espera creciente. Un estado atrasado o un PID ajeno indican degradación y no autorizan terminar un proceso vivo. Los bloqueos impiden duplicados. Configuración y código operativos quedan archivados por huella.
 
@@ -82,4 +82,8 @@ El runtime de salida debe estar separado de los tres runtimes fuente. El paquete
 python sync_outbox.py --invoice-runtime private/invoices-runtime --scan-runtime private/scan-runtime --lineage-runtime private/lineage-runtime --runtime private/sync-runtime --origin https://audit.example.org --project-id appgprj_REPLACE
 ```
 
-La plantilla de comando requiere sustituir rutas y destino. Preparar no envía datos ni crea una credencial o un recibo remoto: el estado es `prepared_not_sent`. Este módulo todavía no es un observador supervisado ni una conexión automática con la web. La escritura desatendida y su autorización deben verificarse por separado. Las pruebas de `test_sync_outbox.py` incluyen idempotencia, cortes incompatibles, corrupción, ausencia de originales y aislamiento de la custodia.
+La plantilla de comando requiere sustituir rutas y destino. Preparar no envía datos ni crea una credencial o un recibo remoto: el estado es `prepared_not_sent`. La escritura desatendida y su autorización deben verificarse por separado. Las pruebas de `test_sync_outbox.py` incluyen idempotencia, cortes incompatibles, corrupción, ausencia de originales y aislamiento de la custodia.
+
+`sync_outbox_watch.py` prepara la bandeja continuamente, con intervalo de 30 a 3.600 segundos. Verifica fuentes y salida aun con entradas sin cambios; evita reconstruir y repetir aceptaciones si el token no cambió. Recupera el paquete durable tras reiniciar y conserva la última aceptación al esperar el linaje o encontrar un fallo. El recibo local conserva también el código del observador; no es un recibo de entrega remota.
+
+El trabajo supervisado `kind: outbox` exige `invoice_runtime`, `scan_runtime`, `lineage_runtime`, `runtime`, `origin`, `project_id` e `interval`. Debe enlazarse con exactamente un observador de cada familia y con los mismos runtimes fuente del linaje. Su `health.json` distingue `status: healthy` (preparación local correcta), `state: prepared_not_sent` y `delivery: not_configured`. La pérdida o alteración de la custodia produce degradación, no una confirmación de sincronización. `test_sync_outbox_watch.py` comprueba recuperación, bloqueos, espera coherente y evidencia dañada.
