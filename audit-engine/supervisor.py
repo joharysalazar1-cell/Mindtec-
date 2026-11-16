@@ -5,8 +5,8 @@ import windows_job
 
 ROOT=Path(__file__).resolve().parent
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
-JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime']}
-JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py'}
+JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime']}
+JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py'}
 def canonical(v):return json.dumps(v,sort_keys=True,ensure_ascii=False,separators=(',',':'))
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def atomic(path,value):
@@ -40,7 +40,7 @@ def config_file(path):
  if len(raw)>100000:raise ValueError('Supervisor configuration exceeds limit')
  config=json.loads(raw)
  if config.get('schema')!='mindtec-supervisor/1' or not isinstance(config.get('jobs'),list) or not config['jobs']:raise ValueError('Supervisor contract required')
- names=set();runtimes=set();feeds=[];outboxes=[]
+ names=set();runtimes=set();feeds=[];outboxes=[];publishers=[]
  for job in config['jobs']:
   if not isinstance(job,dict) or not isinstance(job.get('kind'),str) or job['kind'] not in JOB_FIELDS or not isinstance(job.get('name'),str) or not job['name'].strip() or job['name'] in names:raise ValueError('Unique named supported observer jobs required')
   names.add(job['name'])
@@ -51,6 +51,12 @@ def config_file(path):
   runtimes.add(root)
   interval=job.get('interval',10)
   if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 1<=interval<=(86400 if job['kind']=='feed' else 3600):raise ValueError('Observer interval outside bounds')
+  if job['kind']=='publisher':
+   from sync_client import config_file as client_config
+   client,_=client_config(job['config']);recheck=job.get('recheck_interval',3600)
+   if not client['enabled'] or Path(client['runtime']).resolve()!=root:raise ValueError('Publisher requires an enabled client with the same runtime')
+   if interval<60 or isinstance(recheck,bool) or not isinstance(recheck,(int,float)) or not interval<=recheck<=86400:raise ValueError('Publisher polling/recheck intervals outside bounds')
+   publishers.append(client)
   if job['kind']=='outbox':
    from sync_outbox import target
    target(job.get('origin'),job.get('project_id'))
@@ -78,6 +84,13 @@ def config_file(path):
    matches=[j for j in config['jobs'] if j['kind']==kind and Path(j['runtime']).resolve()==Path(outbox[field]).resolve()]
    if len(matches)!=1:raise ValueError('Outbox must bind to one configured '+kind+' observer')
    if kind=='lineage' and any(Path(matches[0][k]).resolve()!=Path(outbox[k]).resolve() for k in ['scan_runtime','invoice_runtime']):raise ValueError('Outbox and lineage must use the same source runtimes')
+ destinations=set()
+ for client in publishers:
+  source=Path(client['outbox_runtime']).resolve()
+  if source in destinations:raise ValueError('Only one publisher may bind to an outbox runtime')
+  destinations.add(source)
+  matches=[j for j in outboxes if Path(j['runtime']).resolve()==source and j['origin'].rstrip('/')==client['origin'] and j['project_id']==client['project_id']]
+  if len(matches)!=1:raise ValueError('Publisher must bind to one configured outbox with the same Site')
  return config,hashlib.sha256(raw).hexdigest()
 
 def command(job):
@@ -86,6 +99,7 @@ def command(job):
  if job['kind']=='feed':return args+['--config',job['config']]
  if job['kind']=='scan':args+=['watch']
  for flag in JOB_FIELDS[job['kind']]:args+=['--'+flag.replace('_','-'),job[flag]]
+ if job['kind']=='publisher':args+=['--recheck-interval',str(job.get('recheck_interval',3600))]
  if job['kind']=='outbox':args+=['--origin',job['origin'],'--project-id',job['project_id']]
  if job['kind']=='invoice' and job.get('initial_reference'):args+=['--initial-reference',job['initial_reference']]
  return args+['--interval',str(job.get('interval',10))]
@@ -101,7 +115,7 @@ def health(job,pid,clock=None):
   if h.get('pid')!=pid:return {'status':'awaiting_owned_health','reason':'health_belongs_to_another_process'}
   if age< -5 or age>max(30,job.get('interval',10)*4):return {'status':'degraded','reason':'heartbeat_outside_window','age_seconds':round(age,1)}
   # Health never authorizes termination. Only Popen.poll establishes an exit.
-  return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id') or (h.get('last_success') or {}).get('run_id'),'error_type':h.get('error_type'),**({'reason':h.get('reason'),'http_status':h.get('http_status')} if job['kind']=='feed' else {}),**({'state':h.get('state'),'delivery':h.get('delivery'),'reason':h.get('reason')} if job['kind']=='outbox' else {})}
+  return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id') or (h.get('last_success') or {}).get('run_id'),'error_type':h.get('error_type'),**({'reason':h.get('reason'),'http_status':h.get('http_status')} if job['kind']=='feed' else {}),**({'state':h.get('state'),'delivery':h.get('delivery'),'reason':h.get('reason')} if job['kind']=='outbox' else {}),**({'state':h.get('state'),'reason':h.get('reason'),'remote_verified_this_poll':h.get('remote_verified_this_poll'),'last_remote_check_at':h.get('last_remote_check_at')} if job['kind']=='publisher' else {})}
  except (OSError,ValueError,KeyError,TypeError):return {'status':'awaiting_owned_health','reason':'unreadable_health'}
 
 class Supervisor:

@@ -103,3 +103,17 @@ python sync_client.py --config private/sync-client.json
 Este comando es de una ejecución, no un servicio de envío continuo. La obtención de credenciales sin la sesión de autoría y la programación del emisor requieren configuración separada. Los errores conservan el motivo/estado/etapa y no los cuerpos de error ni las credenciales. Una entrega previa permanece conservada si su comprobación posterior falla. El estado de la bandeja original no se reescribe: sus paquetes siguen siendo evidencia preparada y sus entregas se consultan en el runtime del cliente.
 
 `test_sync_client.py` comprueba ausencia de confirmación ante fallos parciales, recibos incorrectos, custodia alterada, destinos incompatibles y respuestas incompletas, además de idempotencia y exclusividad de la credencial por origen.
+
+## Emisor continuo pendiente de acceso administrado
+
+`sync_delivery_watch.py` entrega paquetes nuevos y vuelve a consultar periódicamente el recibo del paquete sin cambios. Reutiliza la configuración del cliente y obtiene la credencial únicamente de su variable de entorno dedicada. No obtiene credenciales por sí mismo ni descarga la fuente Scan. El suministro y la renovación del acceso deben quedar resueltos antes de instalar una tarea.
+
+```powershell
+python sync_delivery_watch.py --config private/sync-client.json --interval 300 --recheck-interval 3600
+```
+
+El estado distingue `remote_verified_this_poll` de `local_delivery_custody_verified`. Una comprobación local intermedia conserva la fecha de la última lectura remota; no afirma haber comprobado nuevamente el servidor. Tras reiniciar exige una lectura remota antes de confirmar. Una credencial ausente o un fallo conserva la última aceptación e informa degradación. Los reintentos respetan `Retry-After` y usan espera creciente sin registrar cuerpos ni claves. Un bloqueo exclusivo impide observadores duplicados.
+
+El supervisor admite `kind: publisher`, con `config`, `runtime`, `interval` y `recheck_interval`. Exige un cliente habilitado, runtime separado y exactamente una bandeja configurada con el mismo runtime fuente, origen y proyecto. La validación estructural no consulta credenciales ni acredita que exista acceso. `test_sync_delivery_watch.py` comprueba entregas nuevas, lectura periódica, recuperación, falta de credencial, espera, corrupción y enlace del supervisor.
+
+Esta capacidad está preparada para despliegue. No se activa automáticamente al incorporar el código, y las pruebas sintéticas no demuestran acceso real a Scan ni disponibilidad de una credencial de servicio desatendida.

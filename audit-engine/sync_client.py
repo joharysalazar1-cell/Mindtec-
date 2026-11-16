@@ -1,5 +1,5 @@
 """Send a verified prepared package to its bound private Site and retain readback."""
-import argparse,hashlib,json,os,re,ssl,sys,time,urllib.error,urllib.parse,urllib.request
+import argparse,hashlib,json,os,re,ssl,sys,time,urllib.error,urllib.parse,urllib.request,math,email.utils
 from pathlib import Path
 import engine,supervisor,windows_job
 from supervisor import exclusive,atomic
@@ -7,7 +7,16 @@ from supervisor import exclusive,atomic
 LOADED={'engine.py':engine.IMPLEMENTATION_BYTES,'supervisor.py':supervisor.IMPLEMENTATION_BYTES,'windows_job.py':Path(windows_job.__file__).read_bytes(),Path(__file__).name:Path(__file__).read_bytes()}
 HEX=re.compile(r'[a-f0-9]{64}')
 class SyncError(Exception):
- def __init__(self,reason,status=None):super().__init__(reason);self.reason=reason;self.status=status
+ def __init__(self,reason,status=None,retry_after=None):super().__init__(reason);self.reason=reason;self.status=status;self.retry_after=retry_after
+def retry_after(value,now=None):
+ if not isinstance(value,str) or len(value)>128:return None
+ value=value.strip()
+ if re.fullmatch(r'[0-9]{1,9}',value):return int(value)
+ try:
+  instant=email.utils.parsedate_to_datetime(value)
+  if instant.tzinfo is None:return None
+  return max(0,math.ceil(instant.timestamp()-(time.time() if now is None else now)))
+ except (TypeError,ValueError,OverflowError):return None
 def require(value,reason):
  if not value:raise SyncError(reason)
 def parsed(raw):
@@ -64,7 +73,7 @@ class Transport:
      chunks.append(chunk);size+=len(chunk);require(size<=limit,'response_size_limit')
     require(declared is None or declared==size,'incomplete_response');return b''.join(chunks),r.headers.get('X-Content-SHA256')
   except urllib.error.HTTPError as error:
-   code=error.code;error.close();raise SyncError('authentication_required' if code in (401,403) else 'rate_limited' if code==429 else 'http_error',code) from None
+   code=error.code;delay=retry_after(error.headers.get('Retry-After')) if error.headers else None;error.close();raise SyncError('authentication_required' if code in (401,403) else 'rate_limited' if code==429 else 'http_error',code,delay) from None
   except SyncError:raise
   except Exception:raise SyncError('transport_failure') from None
  def post(self,path,raw,binary=False):
@@ -145,7 +154,7 @@ class Client:
   health={'pid':os.getpid(),'checked_at':engine.now(),'mode':'site_sync_client_one_shot'}
   try:health.update(self.step())
   except Exception as error:
-   reason=error.reason if isinstance(error,SyncError) else 'local_validation_or_storage_failure';status=getattr(error,'status',None);health.update(status='degraded',state='delivery_not_confirmed',stage=self.stage,reason=reason,http_status=status)
+   reason=error.reason if isinstance(error,SyncError) else 'local_validation_or_storage_failure';status=getattr(error,'status',None);health.update(status='degraded',state='delivery_not_confirmed',stage=self.stage,reason=reason,http_status=status,retry_after_seconds=getattr(error,'retry_after',None))
    payload={'stage':self.stage,'reason':reason,'http_status':status,'local_package_run_id':self.package['run']['id'] if self.package else None,'config_sha256':engine.sha(self.config_raw)}
    try:
     with engine.Engine(self.runtime) as e:
