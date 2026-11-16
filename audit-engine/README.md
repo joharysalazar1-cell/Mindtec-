@@ -28,6 +28,20 @@ python report.py --runtime private/scan-runtime --output private/informe.html
 
 Controles: claves duplicadas, respuestas incompatibles, contradicciones de categoría, conteos inválidos, GPS fuera de dominio e identificador de tienda ausente. Las marcas enumeradas en frío con cero caras se tratan como información que requiere interpretar la definición del formulario; no se convierten en presencia positiva ni en acusaciones.
 
+## Comparación de colectas entre cortes
+
+`scan_compare.py` recibe uno o varios JSON completos por lado, para admitir archivos separados por mes. Los meses se declaran explícitamente. Si falta un mes solicitado en cualquiera de los lados, detiene la comparación: no convierte una exportación parcial en supuestos borrados. Un mes presente todavía no demuestra que estén todas sus visitas; las ausencias se etiquetan como diferencias de presencia entre archivos, sujetas a confirmar filtros y cobertura.
+
+```powershell
+python scan_compare.py --previous private/corte-anterior.json --current private/septiembre.json private/octubre.json --months 2026-09 2026-10 --runtime private/comparacion-colectas
+```
+
+Para una vista mensual, declare solo ese mes; para la conjunta, declare ambos. Empareja por formulario original e ID Kobo, sin unir por tienda ni elegir entre claves o rutas duplicadas. Conserva índices del archivo, registro y respuesta, los valores antes/después y la distinción entre ausente, nulo, número y texto. Compara también los metadatos de revisión del registro. Un movimiento de mes de la misma identidad se distingue de una alta o ausencia.
+
+La bitácora conserva los bytes de todos los archivos y el código exacto utilizado. Repetir los mismos insumos y meses recupera la aceptación existente. Límites: 24 archivos, 60 MB por archivo, 200 MB en conjunto y 100.000 señales; excederlos produce rechazo sin una aceptación truncada. Las rutas de entrada deben estar fuera del runtime. El módulo compara todos los registros, incluso excluidos históricamente, para no ocultar cambios detrás de una exclusión; no modifica la cohorte, los KPI, los originales ni las decisiones humanas. Sus señales no acreditan fraude.
+
+`test_scan_compare.py` cubre alcance parcial, identidades ambiguas, separación por formulario, valores tipados, movimiento de mes, referencias de evidencia, custodia, cambios de implementación e idempotencia. Este comparador se ejecuta por comando; su incorporación a un observador y a la interfaz son pasos separados. Los Excel requieren un adaptador validado antes de sustituir el contrato JSON.
+
 ## Facturas y cortes comparables
 
 `invoice_adapter.py` extrae la hoja de ítems del XLSX preservando cabeceras, tipos, vacíos y filas. `invoice_core.py` controla claves, números, fechas, cabeceras, posibles recapturas y cambios entre cortes de igual alcance. No se inventan impuestos ni se supone que un documento está completo.
