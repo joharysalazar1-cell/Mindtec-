@@ -234,3 +234,17 @@ python perfect_store_watch.py --admission private/perfect-store/admission.json -
 El supervisor admite `kind: perfect_store` con rutas absolutas `admission`, `runtime` y `report_dir`, intervalo minimo30segundos y salidas separadas de toda custodia. Antes de aceptar, el observador valida aritmetica, agregados y todas las celdas citadas, conserva fuentes/configuracion/codigo, registra las contradicciones y genera un HTML inmutable. El informe se retiene tambien como envoltorio JSON/base64 con huella del HTML original. La salud enlaza su ruta y ejecucion. Si falta la copia HTML se restaura desde custodia; una copia alterada se senala sin sobrescribirla. Los candidatos rechazados se conservan, no reemplazan el ultimo resultado aceptado y no acumulan eventos identicos en cada sondeo. Un cambio del codigo exige reiniciar el observador y queda ligado a la nueva ejecucion.
 
 El informe web publicado sigue siendo una instantanea hasta una publicacion manual; el observador solo actualiza resultados locales. La admision explicita no garantiza la veracidad en campo ni certifica la formula oficial, y las senales requieren revision humana. El registro de salud no prueba que un proceso siga vivo: se contrasta con su proceso propietario al verificar la instalacion.
+
+
+## Distribucion numerica desde presencia declarada
+
+`numeric_distribution.py` deriva el indicador de presencia del ultimo Perfect Store aceptado: tiendas con marca / tiendas que venden categoria. Exige la cohorte y el catalogo completos; conserva todas las combinaciones marca/categoria/mes, incluso sin base elegible. Una ausencia explicita produce cero; una respuesta pendiente no. Publica un porcentaje exacto solo con elegibilidad y presencia resueltas, y en otro caso limites aritmeticos de datos faltantes, no intervalos de confianza. El ano observado utiliza suma de numeradores y denominadores de tienda/mes, no promedio de porcentajes mensuales.
+
+`numeric_distribution_run.py` lee la ultima admision aceptada por el observador PS dentro de una transaccion verificada, coteja originales y alcance, y conserva ejecucion fuente, respuestas originales, configuracion, politica, admision y codigo en una custodia separada. No adopta una ejecucion PS meramente calculada que aun no tenga evento de aceptacion. `numeric_distribution_report.py` crea un HTML autonomo con filtros, grafico del porcentaje o sus limites, visitas elegibles/no elegibles y celdas. Esta derivacion se ejecuta por comando; no es un octavo observador instalado ni certifica coincidencia con el panel oficial.
+
+```text
+python numeric_distribution_run.py --ps-runtime private/perfect-store/runtime --runtime private/numeric-distribution/runtime
+python numeric_distribution_report.py --runtime private/numeric-distribution/runtime --output private/revision/distribucion-numerica.html
+```
+
+Las pruebas enumeran asignaciones posibles de datos faltantes para comprobar limites, distinguen base cero de porcentaje cero y prueban el agrupamiento anual con denominadores desiguales. La derivacion comparte la presencia del PS operativo, por lo que no se presenta como una segunda observacion independiente del campo.
