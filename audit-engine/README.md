@@ -216,3 +216,6 @@ python perfect_store_report.py --runtime private/perfect-store/runtime --output 
 ```
 
 El evaluador es una biblioteca y el informe opera sobre una ejecución aceptada de tipo `operational_perfect_store`. La preparación de configuración y la admisión de una fuente completa son pasos explícitos; estos módulos no descargan datos, no programan recálculos, no certifican el motor oficial ni cambian el panel automáticamente. Las pruebas de respuestas anchas, Perfect Store, verificación independiente y transporte cubren ambigüedad, ceros/vacíos, repeticiones, aplicabilidad, fórmulas, referencias originales y restauración íntegra de los datos consultables.
+
+
+`category_eligibility.py` resuelve una rama hija no respondida solo cuando dos listas parentales explícitas y compatibles excluyen su familia y no existe evidencia positiva en sus subcategorías. Los conflictos permanecen documentados. `perfect_store_findings.py` agrupa contradicciones por visita, mes, familia y regla; conserva referencias a respuestas y celdas originales. Sus señales se admiten en una ejecución independiente del motor y pueden exportarse con `review_queue.py`; no deciden fraude, no modifican fuentes y no registran revisiones humanas automáticas. El informe muestra las señales y las exclusiones parentales con su respaldo.

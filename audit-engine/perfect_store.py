@@ -5,9 +5,9 @@ Unknown answers cannot become failures, successes or inapplicability by default.
 """
 import collections,math,re,statistics,unicodedata
 from pathlib import Path
-import engine
+import engine,category_eligibility
 
-VERSION='perfect-store-operational/2.0.1'
+VERSION='perfect-store-operational/2.1.0'
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
 COMPONENTS=['Presencia','SKU núcleo','Frío','POP','Sin quiebre']
 
@@ -31,7 +31,7 @@ def evaluate(flat,catalog,policy,configuration):
   found={owners[k] for k in [norm(code),norm(label)] if k in owners}
   return next(iter(found)) if len(found)==1 else None
  def price_label(value):return norm(price_aliases.get(value,value))
- cells={};answers={};details=[];omitted=[]
+ cells={};answers={};details=[];omitted=[];eligibility_cache={};eligibility_checks=[]
  def evidence(a):
   cell_ids=[]
   for cell in a.get('cells',[]):
@@ -53,18 +53,32 @@ def evaluate(flat,catalog,policy,configuration):
   cat=entry['category'];code=entry['brand_code'];brand=entry['brand'];co=owner(code,brand);config_key=engine.canonical([cat,code,brand]);reference=refs_by_key.get(config_key)
   for r in flat.records:
    if r['id'] in excluded:continue
-   p=prepared[r['id']];suffix=lambda name:flat.suffix(r,name);gate=suffix('vende_'+cat);choice=suffix('marcas_'+cat)
-   repeats=flat.groups(r,'rep_'+cat);matching=[fs for fs in repeats.values() if observed(fs.get('marca_act_'+cat,missing('marca_act_'+cat))) and fs['marca_act_'+cat]['value']==code]
+   p=prepared[r['id']];suffix=lambda name:flat.suffix(r,name);cache_key=(r['id'],cat)
+   if cache_key not in eligibility_cache:
+    gate=suffix('vende_'+cat);choice=suffix('marcas_'+cat);repeats=flat.groups(r,'rep_'+cat);parent_rules=configuration.get('parent_gate_rules',{});rule_matches=[(prefix,rule) for prefix,rule in parent_rules.items() if cat.startswith(prefix)]
+    if len(rule_matches)>1:raise ValueError('Parent gate rules overlap for category')
+    options={};positive_sibling_answers=[]
+    if rule_matches:
+     prefix,rule=rule_matches[0];broad=suffix(rule['broad_suffix']);registry=suffix(rule['registry_suffix']);sibling_routes=[route for route in p['routes'] if route.split('/')[-1].startswith('vende_'+prefix)]
+     positive_sibling_answers=[flat.query(r,route) for route in sibling_routes if yesno(flat.query(r,route))=='si']
+     options={'parent_code':rule['parent_code'],'broad':broad,'registry':registry,'allowed_registry_codes':rule['allowed_registry_codes'],'positive_sibling':bool(positive_sibling_answers)}
+    positive_repeat=any(observed(fs.get('marca_act_'+cat,missing('marca_act_'+cat))) and fs['marca_act_'+cat]['value'] not in (None,'') for fs in repeats.values())
+    decision=category_eligibility.decide(gate,choice,positive_repeat=positive_repeat,**options)
+    if decision['signals']:
+     decision['sources']+=positive_sibling_answers+[fs['marca_act_'+cat] for fs in repeats.values() if 'marca_act_'+cat in fs and observed(fs['marca_act_'+cat])]
+    support=[evidence(a) for a in decision['sources']]
+    eligibility_cache[cache_key]={'gate':gate,'choice':choice,'repeats':repeats,'decision':decision,'support':support}
+    eligibility_checks.append({'kobo_id':r['id'],'month':r['month'],'category':cat,'eligible':decision['eligible'],'method':decision['method'],'reason':decision['reason'],'parent_code':decision['parent_code'],'signals':decision['signals'],'support':support})
+   ec=eligibility_cache[cache_key];gate=ec['gate'];choice=ec['choice'];repeats=ec['repeats'];decision=ec['decision'];matching=[fs for fs in repeats.values() if observed(fs.get('marca_act_'+cat,missing('marca_act_'+cat))) and fs['marca_act_'+cat]['value']==code]
    repeat_evidence=[a for fs in matching for f,a in fs.items() if f in ('marca_act_'+cat,'marca_lbl_'+cat)]
    explicit_presence=(code in tokens(choice['value'])) if observed(choice) else None
    has=True if matching else explicit_presence
    conflicting=bool(matching) and explicit_presence is False
-   eligible=True if yesno(gate)=='si' else False if yesno(gate)=='no' else None
-   if eligible is False and has is True:eligible=None;conflicting=True
+   eligible=decision['eligible']
    if eligible is False:
-    omitted.append({'id':r['id'],'month':r['month'],'category':cat,'brand_code':code,'reason':'Explicitly does not sell this subcategory','eligibility_evidence':evidence(gate)});continue
+    omitted.append({'id':r['id'],'month':r['month'],'category':cat,'brand_code':code,'reason':decision['reason'],'eligibility_method':decision['method'],'eligibility_evidence':evidence(gate),'eligibility_support':ec['support']});continue
    presence=int(has) if eligible is True and has is not None and not conflicting else None
-   cs=[component('Presencia',presence,'Declaración de marca en una subcategoría elegible; contradicciones o respuestas ausentes quedan pendientes.',[gate,choice]+repeat_evidence)]
+   cs=[component('Presencia',presence,'Declaración de marca en una subcategoría elegible; contradicciones o respuestas ausentes quedan pendientes.',decision['sources']+repeat_evidence)]
    # This is the documented historic price-basket proxy, not a certified core-SKU matrix.
    selected=[fs['sku_precio_label'] for fs in p['prices'].values() if 'sku_precio_label' in fs];nprices=suffix('n_skus_precio');price_choice=suffix('skus_precio_catalogo')
    selected_good=[a for a in selected if observed(a) and isinstance(a['value'],str)];selected_count=count(nprices.get('value')) if observed(nprices) else len(tokens(price_choice['value'])) if observed(price_choice) else None
@@ -125,11 +139,11 @@ def evaluate(flat,catalog,policy,configuration):
    elif co and observed(buys) and tokens(buys['value']) and co not in {company(t) for t in tokens(buys['value'])}:cs.append(na('Sin quiebre','La lista explícita de empresas compradoras no incluye a este propietario.',stock_sources))
    else:cs.append(component('Sin quiebre',None,'Empresa o declaración de quiebre no resuelta de forma única.',stock_sources))
    known=[c for c in cs if c['state']=='measured'];pending=[c for c in cs if c['state']=='pending'];n=sum(c['value'] for c in known);den=len(known);miss=len(pending);score=100*n/den if den and not miss and eligible is True else None
-   details.append({'month':r['month'],'year':r['month'][:4],'kobo_id':r['id'],'category':cat,'brand_code':code,'brand':brand,'company':co,'eligible':eligible,'eligibility_evidence':evidence(gate),'components':cs,'numerator':n,'measured_denominator':den,'pending_components':miss,'score':score,'conditional_minimum':100*n/(den+miss) if den+miss else None,'conditional_maximum':100*(n+miss)/(den+miss) if den+miss else None,'rule_version':VERSION})
+   details.append({'month':r['month'],'year':r['month'][:4],'kobo_id':r['id'],'category':cat,'brand_code':code,'brand':brand,'company':co,'eligible':eligible,'eligibility_evidence':evidence(gate),'eligibility_support':ec['support'],'eligibility_method':decision['method'],'components':cs,'numerator':n,'measured_denominator':den,'pending_components':miss,'score':score,'conditional_minimum':100*n/(den+miss) if den+miss else None,'conditional_maximum':100*(n+miss)/(den+miss) if den+miss else None,'rule_version':VERSION})
  def summarize(rows,period,kind):
   values=[r['score'] for r in rows if r['score'] is not None];unknown=sum(r['eligible'] is None for r in rows);complete=len(values)==len(rows) and not unknown
   return {'period':period,'period_kind':kind,'category':rows[0]['category'],'brand_code':rows[0]['brand_code'],'brand':rows[0]['brand'],'company':rows[0]['company'],'store_month_observations':len(rows),'unique_visits':len({r['kobo_id'] for r in rows}),'eligibility_pending':unknown,'complete_store_scores':len(values),'score':statistics.mean(values) if complete and values else None,'partial_mean_not_population_score':statistics.mean(values) if values else None,'minimum':statistics.mean(r['conditional_minimum'] for r in rows) if rows and not unknown else None,'maximum':statistics.mean(r['conditional_maximum'] for r in rows) if rows and not unknown else None,'months_observed':sorted({r['month'] for r in rows}),'components':{name:{'fulfilled':sum(c['value']==1 and c['state']=='measured' for r in rows for c in r['components'] if c['component']==name),'measured':sum(c['state']=='measured' for r in rows for c in r['components'] if c['component']==name),'pending':sum(c['state']=='pending' for r in rows for c in r['components'] if c['component']==name),'not_applicable':sum(c['state']=='not_applicable' for r in rows for c in r['components'] if c['component']==name)} for name in COMPONENTS}}
  monthly=collections.defaultdict(list);annual=collections.defaultdict(list)
  for d in details:
   monthly[(d['month'],d['category'],d['brand_code'],d['brand'])].append(d);annual[(d['year'],d['category'],d['brand_code'],d['brand'])].append(d)
- return {'schema':'mindtec-operational-perfect-store/2','version':VERSION,'source_sha256':flat.source_sha256,'configuration_version':configuration['version'],'details':details,'monthly':[summarize(rows,k[0],'month') for k,rows in sorted(monthly.items())],'annual_observed_months':[summarize(rows,k[0],'year_observed_months_only') for k,rows in sorted(annual.items())],'explicitly_ineligible':omitted,'cells':cells,'answer_evidence':answers,'mapping_coverage':flat.coverage(),'limits':['Operational reconstruction using historical documented configuration; not the official MindTEC calculation kernel or certified period version.','Core-SKU component uses a historical price-basket proxy, not a certified core assortment matrix.','Missing answers, incomplete repetitions and unresolved mappings remain pending.','Year view covers observed months only, averaged over store-month observations; not a complete calendar year.','No panel comparison is asserted without compatible source, scope and rule versions.','A signal or reconstruction difference does not establish fraud.']}
+ return {'schema':'mindtec-operational-perfect-store/2','version':VERSION,'source_sha256':flat.source_sha256,'configuration_version':configuration['version'],'details':details,'monthly':[summarize(rows,k[0],'month') for k,rows in sorted(monthly.items())],'annual_observed_months':[summarize(rows,k[0],'year_observed_months_only') for k,rows in sorted(annual.items())],'explicitly_ineligible':omitted,'eligibility_checks':eligibility_checks,'cells':cells,'answer_evidence':answers,'mapping_coverage':flat.coverage(),'limits':['Operational reconstruction using historical documented configuration; not the official MindTEC calculation kernel or certified period version.','Core-SKU component uses a historical price-basket proxy, not a certified core assortment matrix.','Missing answers, incomplete repetitions and unresolved mappings remain pending.','Year view covers observed months only, averaged over store-month observations; not a complete calendar year.','No panel comparison is asserted without compatible source, scope and rule versions.','A signal or reconstruction difference does not establish fraud.']}

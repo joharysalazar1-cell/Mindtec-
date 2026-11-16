@@ -30,6 +30,7 @@ def verify_model(result):
   lo=100*n/(den+pending) if den+pending else None;hi=100*(n+pending)/(den+pending) if den+pending else None
   if not close(lo,row['conditional_minimum']) or not close(hi,row['conditional_maximum']):raise ValueError('Store uncertainty bounds differ')
   if row['eligibility_evidence'] not in result['answer_evidence']:raise ValueError('Eligibility evidence missing')
+  if any(k not in result['answer_evidence'] for k in row.get('eligibility_support',[])):raise ValueError('Eligibility support missing')
   monthly[(row['month'],row['category'],row['brand_code'],row['brand'])].append(row);annual[(row['year'],row['category'],row['brand_code'],row['brand'])].append(row)
  for summaries,groups in [(result['monthly'],monthly),(result['annual_observed_months'],annual)]:
   if len(summaries)!=len(groups):raise ValueError('Summary coverage differs')
@@ -47,6 +48,11 @@ def verify_model(result):
    for name in COMPONENTS:
     cs=[c for r in rows for c in r['components'] if c['component']==name];counts={'fulfilled':sum(c['state']=='measured' and c['value']==1 for c in cs),'measured':sum(c['state']=='measured' for c in cs),'pending':sum(c['state']=='pending' for c in cs),'not_applicable':sum(c['state']=='not_applicable' for c in cs)}
     if s['components'][name]!=counts:raise ValueError('Summary component coverage differs')
+ for row in result['explicitly_ineligible']:
+  support=row.get('eligibility_support',[row['eligibility_evidence']])
+  if any(k not in result['answer_evidence'] for k in support):raise ValueError('Excluded category source support missing')
+ for check in result.get('eligibility_checks',[]):
+  if any(k not in result['answer_evidence'] for k in check['support']):raise ValueError('Category check source support missing')
  return {'store_rows':len(result['details']),'monthly_rows':len(result['monthly']),'cells':len(result['cells']),'answer_bindings':len(result['answer_evidence'])}
 
 def verify_cells(result,workbook):

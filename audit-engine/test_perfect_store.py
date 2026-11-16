@@ -16,6 +16,14 @@ def adapter(overrides=None,extra=None):
  w,h=fixture(headers,list(values.values()),answers);return FlatAnswers(w,h)
 
 class PerfectStoreTests(unittest.TestCase):
+ def test_parent_exclusion_requires_agreement_and_retains_support(self):
+  import copy
+  config=copy.deepcopy(CONFIG);config['parent_gate_rules']={'bsa_':{'parent_code':'bebidas_sin_alcohol','broad_suffix':'categorias_vendidas','registry_suffix':'cat_registro_categorias','allowed_registry_codes':['bebidas_sin_alcohol','lacteos']}}
+  values={'g/vende_bsa_gaseosas':'','g/marcas_bsa_gaseosas':'','g/categorias_vendidas':'lacteos','g/cat_registro_categorias':'lacteos'}
+  r=evaluate(adapter(values),CATALOG,{'exclusions':[]},config)
+  self.assertEqual(r['details'],[]);row=r['explicitly_ineligible'][0];self.assertEqual(row['eligibility_method'],'agreed_explicit_parent_exclusion');self.assertEqual(len(row['eligibility_support']),4)
+  values['g/categorias_vendidas']='bebidas_sin_alcohol lacteos';r=evaluate(adapter(values),CATALOG,{'exclusions':[]},config)
+  self.assertIsNone(r['details'][0]['eligible']);self.assertIn('parent_category_lists_disagree',r['eligibility_checks'][0]['signals'])
  def run_model(self,a,policy=None):return evaluate(a,CATALOG,policy or {'exclusions':[]},CONFIG)
  def components(self,r):return {c['component']:c for c in r['details'][0]['components']}
  def test_store_denominator_excludes_only_explicit_inapplicability(self):
@@ -34,7 +42,7 @@ class PerfectStoreTests(unittest.TestCase):
   extras={'g/cuantos_enfriadores_bsa':1,'rep_enfriador[1]/tipo_enfriador':'nevera_vertical','rep_enfriador[1]/enfriador_encendido':'si','g/n_frio_bsa_gaseosas':1,'rep_frio_bsa_gaseosas[1]/marca_frio_act_bsa_gaseosas':'coca_cola','rep_frio_bsa_gaseosas[1]/caras_frio_bsa_gaseosas':0}
   r=self.run_model(adapter({'g/hay_enfriadores':'si'},extras));self.assertEqual(self.components(r)['Frío']['value'],0);self.assertEqual(r['details'][0]['score'],60)
  def test_explicit_noneligibility_and_exclusions_remain_auditable(self):
-  r=self.run_model(adapter({'g/vende_bsa_gaseosas':'no','g/marcas_bsa_gaseosas':'pepsi'}));self.assertEqual(r['details'],[]);self.assertEqual(len(r['explicitly_ineligible']),1)
+  r=self.run_model(adapter({'g/vende_bsa_gaseosas':'no','g/marcas_bsa_gaseosas':''}));self.assertEqual(r['details'],[]);self.assertEqual(len(r['explicitly_ineligible']),1)
   r=self.run_model(adapter(),{'exclusions':[{'id':'1'}]});self.assertEqual(r['details'],[])
  def test_contradictory_noneligibility_not_silently_dropped(self):
   r=self.run_model(adapter({'g/vende_bsa_gaseosas':'no'}));self.assertIsNone(r['details'][0]['eligible']);self.assertIsNone(r['monthly'][0]['score'])
