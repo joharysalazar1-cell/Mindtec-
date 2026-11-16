@@ -53,6 +53,7 @@ def workbook_tables(path,raw=None):
    if not rows:continue
    header=rows[0];columns=sorted(header['values_by_column']);headers=[header['values_by_column'][c] for c in columns]
    if not all(isinstance(h,str) and h.strip() for h in headers) or len(set(headers))!=len(headers):raise ValueError('Nonempty distinct result headers required')
+   if any(c not in columns and value is not None for r in rows[1:] for c,value in r['values_by_column'].items()):raise ValueError('Data outside declared header columns cannot be discarded')
    records=[{'source_row':r['source_row'],'cells':[r['values_by_column'].get(c) for c in columns],'coordinates':[r['coordinates_by_column'].get(c) for c in columns]} for r in rows[1:]]
    tables.append({'sheet':sheet.attrib['name'],'part':target,'header_row':header['source_row'],'headers':headers,'header_coordinates':[header['coordinates_by_column'][c] for c in columns],'rows':records,'formula_cells_using_cached_values':formulas})
  return {'schema':'mindtec-collection-result-cut/1','identity_namespace':'scan_internal_envio_id','provenance':{'filename':path.name,'original_sha256':hashlib.sha256(raw).hexdigest(),'source_bytes':len(raw),'date_system':'excel_1904' if date1904 else 'excel_1900','adapter_version':VERSION,'adapter_sha256':hashlib.sha256(IMPLEMENTATION_BYTES).hexdigest()},'tables':tables}

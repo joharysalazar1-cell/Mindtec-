@@ -151,3 +151,19 @@ El estado distingue `remote_verified_this_poll` de `local_delivery_custody_verif
 El supervisor admite `kind: publisher`, con `config`, `runtime`, `interval` y `recheck_interval`. Exige un cliente habilitado, runtime separado y exactamente una bandeja configurada con el mismo runtime fuente, origen y proyecto. La validación estructural no consulta credenciales ni acredita que exista acceso. `test_sync_delivery_watch.py` comprueba entregas nuevas, lectura periódica, recuperación, falta de credencial, espera, corrupción y enlace del supervisor.
 
 Esta capacidad está preparada para despliegue. No se activa automáticamente al incorporar el código, y las pruebas sintéticas no demuestran acceso real a Scan ni disponibilidad de una credencial de servicio desatendida.
+
+## Exportaciones normalizadas de colecta
+
+`collection_adapter.py` lee el XLSX de resultados con sus cinco hojas de colecta y conserva coordenadas y tipos originales. `collection_audit.py` audita relaciones, claves ambiguas, conteos, precios y campos de catálogo. Separa meses y aplica exclusiones mediante una correspondencia explícita entre ID interno de Scan e ID Kobo. No confunde un vacío con cero, ni la ausencia en una exportación parcial con una eliminación. Las participaciones calculables se limitan a caras registradas del corte; no certifican los KPI del panel completo.
+
+`collection_watch.py` observa únicamente el archivo seleccionado. Conserva originales, política, correspondencia de IDs, resultado y código en una custodia propia. Recupera la última aceptación tras reiniciar; las entradas incompletas o inválidas quedan rechazadas con evidencia sin sustituirla. Los cambios de política o código se identifican como recálculos, no como cambios de datos. No realiza solicitudes de red ni publicaciones.
+
+```powershell
+python collection_watch.py --source private/collection/incoming/current.xlsx --policy private/policy.json --crosswalk private/collection/crosswalk.json --runtime private/collection/runtime --initial-reference private/collection/reference.xlsx --interval 30
+```
+
+La referencia inicial es opcional y solo se lee para la primera aceptación. Los cortes siguientes usan originales conservados; un recálculo sin cambios de fuente mantiene la referencia de comparación. La correspondencia debe contener `rows` con pares únicos `internal_id` / `kobo_id`. Las visitas sin correspondencia se conservan, generan una alerta y no entran en cálculos sujetos a exclusiones históricas. Una fórmula con valor en caché no se acepta como observación original.
+
+El supervisor admite `kind: collection`, con `source`, `policy`, `crosswalk`, `runtime`, `interval` (10 a 3.600 segundos) e `initial_reference` opcional; todas las rutas deben ser absolutas y los archivos de entrada deben quedar fuera de la custodia. Su estado distingue `custody_verified` de `network_delivery: false`. Para incorporar una nueva exportación, conserve el original y sustituya atómicamente solo la copia designada; no escriba dentro de `objects` ni edite la bitácora. Este observador no inspecciona Descargas ni sustituye las fuentes de facturas o respuestas crudas de Scan.
+
+Las pruebas `test_collection_audit.py`, `test_collection_watch.py` y `test_collection_supervisor.py` cubren denominadores mensuales, trazabilidad por celda, duplicados, cambios de política, recuperación, rechazo de archivos incompletos, corrupción, exclusión mutua y configuración del supervisor.

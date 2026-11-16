@@ -63,7 +63,9 @@ def evaluate(current,previous=None,crosswalk=None,policy=None):
  current_ids=set(parents);excluded=[];unmapped=[]
  for eid,row in parents.items():
   kobo=crosswalk.get(eid)
-  if kobo is None:unmapped.append(eid)
+  if kobo is None:
+   unmapped.append(eid)
+   emit('identity_crosswalk_missing','medium','visits',row,['ID envío'],eid,'No hay correspondencia inequívoca con ID Kobo. Se conserva la visita, pero no entra en cálculos sujetos a exclusiones históricas.')
   if kobo in exclusions:
    excluded.append({'internal_id':eid,'kobo_id':kobo,'reason':exclusions[kobo]['reason'],'source_row':row['source_row']})
    if row['values'].get('Estado de entrega')=='LISTO':emit('historical_exclusion_in_ready_export','medium','visits',row,['ID envío','Estado de entrega'],{'kobo_id':kobo,'historical_reason':exclusions[kobo]['reason']},'El estado de entrega no revoca por sí solo la exclusión histórica. Requiere decisión motivada antes de cambiar la cohorte.')

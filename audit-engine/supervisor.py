@@ -5,8 +5,8 @@ import windows_job
 
 ROOT=Path(__file__).resolve().parent
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
-JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime']}
-JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py'}
+JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime']}
+JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py'}
 def canonical(v):return json.dumps(v,sort_keys=True,ensure_ascii=False,separators=(',',':'))
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def atomic(path,value):
@@ -51,6 +51,13 @@ def config_file(path):
   runtimes.add(root)
   interval=job.get('interval',10)
   if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 1<=interval<=(86400 if job['kind']=='feed' else 3600):raise ValueError('Observer interval outside bounds')
+  if job['kind']=='collection':
+   if interval<10:raise ValueError('Collection polling interval must be at least 10 seconds')
+   inputs=[Path(job[k]).resolve() for k in ['source','policy','crosswalk']]
+   if job.get('initial_reference'):
+    if not isinstance(job['initial_reference'],str) or not Path(job['initial_reference']).is_absolute():raise ValueError('Absolute collection reference path required')
+    inputs.append(Path(job['initial_reference']).resolve())
+   if any(p.is_relative_to(root) for p in inputs):raise ValueError('Collection inputs must be outside custody runtime')
   if job['kind']=='scan_comparison':
    import scan_compare
    scan_compare.months_contract(job.get('months'))
@@ -111,7 +118,7 @@ def command(job):
  if job['kind']=='scan_comparison':args+=['--months',*job['months']]
  if job['kind']=='publisher':args+=['--recheck-interval',str(job.get('recheck_interval',3600))]
  if job['kind']=='outbox':args+=['--origin',job['origin'],'--project-id',job['project_id']]
- if job['kind']=='invoice' and job.get('initial_reference'):args+=['--initial-reference',job['initial_reference']]
+ if job['kind'] in ('invoice','collection') and job.get('initial_reference'):args+=['--initial-reference',job['initial_reference']]
  return args+['--interval',str(job.get('interval',10))]
 
 def health(job,pid,clock=None):
@@ -125,6 +132,7 @@ def health(job,pid,clock=None):
   if h.get('pid')!=pid:return {'status':'awaiting_owned_health','reason':'health_belongs_to_another_process'}
   if age< -5 or age>max(30,job.get('interval',10)*4):return {'status':'degraded','reason':'heartbeat_outside_window','age_seconds':round(age,1)}
   # Health never authorizes termination. Only Popen.poll establishes an exit.
+  if job['kind']=='collection':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery')}
   if job['kind']=='scan_comparison':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'comparison_custody_verified':h.get('comparison_custody_verified')}
   return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id') or (h.get('last_success') or {}).get('run_id'),'error_type':h.get('error_type'),**({'reason':h.get('reason'),'http_status':h.get('http_status')} if job['kind']=='feed' else {}),**({'state':h.get('state'),'delivery':h.get('delivery'),'reason':h.get('reason')} if job['kind']=='outbox' else {}),**({'state':h.get('state'),'reason':h.get('reason'),'remote_verified_this_poll':h.get('remote_verified_this_poll'),'last_remote_check_at':h.get('last_remote_check_at')} if job['kind']=='publisher' else {})}
  except (OSError,ValueError,KeyError,TypeError):return {'status':'awaiting_owned_health','reason':'unreadable_health'}
