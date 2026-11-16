@@ -52,6 +52,14 @@ La custodia de comparación debe estar separada. El bloqueo impide observadores 
 
 El trabajo supervisado `kind: scan_comparison` requiere `scan_runtime`, `runtime`, `months` e `interval` (10–3.600 segundos). Se enlaza con exactamente un observador Scan configurado y usa un script fijo. El estado supervisado conserva la distinción entre línea base, comparación disponible y comparación no actualizada. `test_scan_compare_watch.py` verifica recuperación, alcance incompleto, entradas mutables, cambios sin datos nuevos, corrupción, exclusividad y enlace/estado del supervisor. Esta observación local no activa envíos automáticos a la web; la consulta desde la interfaz sigue siendo una integración separada.
 
+`export_scan_comparison.py` exporta manualmente una aceptación del observador con sus fuentes y código exactos, tras verificar la custodia. No lee la entrada mutable ni envía datos. El destino debe estar fuera de los runtimes, no se sobrescribe un archivo existente y el paquete web está limitado a 20 MB.
+
+```powershell
+python export_scan_comparison.py --scan-runtime private/scan-runtime --runtime private/comparison-runtime --months 2026-09 2026-10 --output private/entregas/comparacion.json
+```
+
+La carga de ese paquete en una web privada es un paso manual. La interfaz debe identificar el cálculo como local: conservar bytes y cotejar filas no equivale a recalcular el algoritmo, verificar su bitácora completa o certificar la completitud de los hallazgos. `test_export_scan_comparison.py` verifica originales antes/después, exportación sin envío, rechazo ante alteración y ausencia de sobrescrituras.
+
 ## Facturas y cortes comparables
 
 `invoice_adapter.py` extrae la hoja de ítems del XLSX preservando cabeceras, tipos, vacíos y filas. `invoice_core.py` controla claves, números, fechas, cabeceras, posibles recapturas y cambios entre cortes de igual alcance. No se inventan impuestos ni se supone que un documento está completo.
