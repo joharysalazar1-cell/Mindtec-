@@ -42,6 +42,16 @@ La bitácora conserva los bytes de todos los archivos y el código exacto utiliz
 
 `test_scan_compare.py` cubre alcance parcial, identidades ambiguas, separación por formulario, valores tipados, movimiento de mes, referencias de evidencia, custodia, cambios de implementación e idempotencia. Este comparador se ejecuta por comando; su incorporación a un observador y a la interfaz son pasos separados. Los Excel requieren un adaptador validado antes de sustituir el contrato JSON.
 
+`scan_compare_watch.py` observa exclusivamente las ejecuciones Scan ya aceptadas en una custodia verificada, sin leer la entrada mutable ni descargar datos. La primera aceptación es `baseline_only`: conserva el corte y sus conteos mensuales, sin simular una comparación. Al aceptar Scan un contenido diferente, calcula un paquete con vista conjunta y vistas por mes contra el último contenido aceptado por este observador. Un cambio de política o código que mantenga los mismos bytes de origen no se etiqueta como cambio de datos.
+
+```powershell
+python scan_compare_watch.py --scan-runtime private/scan-runtime --runtime private/comparison-runtime --months 2026-09 2026-10 --interval 30
+```
+
+La custodia de comparación debe estar separada. El bloqueo impide observadores duplicados; un runtime queda vinculado al origen y meses iniciales. Verifica fuentes y salida aun sin cambios y recupera su aceptación después de reiniciar. Ante un mes ausente, una fuente dañada o un fallo, conserva la aceptación anterior e informa degradación. Los candidatos rechazados y el código del observador se conservan por huella. `comparison_custody_verified` acredita custodia local; no implica descarga reciente ni verificación de la plataforma externa. Las señales de la vista conjunta y de los meses se solapan y no se suman como errores independientes.
+
+El trabajo supervisado `kind: scan_comparison` requiere `scan_runtime`, `runtime`, `months` e `interval` (10–3.600 segundos). Se enlaza con exactamente un observador Scan configurado y usa un script fijo. El estado supervisado conserva la distinción entre línea base, comparación disponible y comparación no actualizada. `test_scan_compare_watch.py` verifica recuperación, alcance incompleto, entradas mutables, cambios sin datos nuevos, corrupción, exclusividad y enlace/estado del supervisor. Esta observación local no activa envíos automáticos a la web; la consulta desde la interfaz sigue siendo una integración separada.
+
 ## Facturas y cortes comparables
 
 `invoice_adapter.py` extrae la hoja de ítems del XLSX preservando cabeceras, tipos, vacíos y filas. `invoice_core.py` controla claves, números, fechas, cabeceras, posibles recapturas y cambios entre cortes de igual alcance. No se inventan impuestos ni se supone que un documento está completo.
