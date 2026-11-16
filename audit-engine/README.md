@@ -200,3 +200,19 @@ python review_queue.py export --runtime private/collection-impact/runtime --outp
 ```
 
 El anexo mantiene originales, código y señal por fila en una custodia separada. Su informe coteja las celdas citadas con el XLSX de su lado de origen. Los hallazgos de cobertura y los de conteos del corte pueden solaparse; no deben sumarse como errores independientes ni como probabilidad de fraude. Este análisis se ejecuta expresamente por comando: su existencia no acredita que el observador lo regenere ni que se haya publicado en la web.
+
+## Respuestas anchas y reconstrucción operativa de Perfect Store
+
+`flat_answers.py` lee el Excel detallado de Envíos mediante correspondencias exactas entre pregunta, índices de repetición y formulario. Las rutas proceden de un esquema histórico explícito; sus valores históricos no se reutilizan. Las etiquetas ambiguas, celdas en conflicto, rutas sin correspondencia y vacíos quedan identificados. Esta proyección no se presenta como la exportación JSON oficial ni se incorpora automáticamente al observador de respuestas crudas.
+
+`perfect_store.py` calcula los cinco componentes de la reconstrucción documentada: Presencia, SKU núcleo, Frío, POP y Sin quiebre. Requiere configuración explícita de pesos, propietario, canasta de referencias, equivalencias y regla de acceso al frío. El componente SKU usa el proxy histórico de la canasta de precios: no certifica una matriz núcleo oficial. Se distingue la enumeración de todos los enfriadores del formulario anterior de la enumeración BSA del posterior; no se rellena un conteo BSA vacío con el total.
+
+Las repeticiones incompletas y listas sin resolver quedan pendientes; no se convierten automáticamente en cero ni en no aplica. Un puntaje completo requiere resolver todos los componentes aplicables y la elegibilidad. Los límites muestran los extremos por componentes pendientes, no intervalos estadísticos de confianza. El promedio de las fichas completas se etiqueta como parcial. La vista anual incluye solo los meses observados y utiliza observaciones tienda/mes; no representa el año calendario completo.
+
+`perfect_store_check.py` verifica de forma independiente la aritmética de tiendas y agregados, pesos, cobertura y huellas de evidencia. Coteja cada celda con el XLSX conservado. `perfect_store_report.py` genera un HTML autónomo con filtros, estados de componentes, cálculo por tienda y celdas de origen. Indexa las referencias para transporte sin eliminar identificadores; la descarga JSON restaura todas las referencias originales. La serialización descargada no se atribuye a los bytes exactos de la custodia.
+
+```powershell
+python perfect_store_report.py --runtime private/perfect-store/runtime --output private/revision/perfect-store.html
+```
+
+El evaluador es una biblioteca y el informe opera sobre una ejecución aceptada de tipo `operational_perfect_store`. La preparación de configuración y la admisión de una fuente completa son pasos explícitos; estos módulos no descargan datos, no programan recálculos, no certifican el motor oficial ni cambian el panel automáticamente. Las pruebas de respuestas anchas, Perfect Store, verificación independiente y transporte cubren ambigüedad, ceros/vacíos, repeticiones, aplicabilidad, fórmulas, referencias originales y restauración íntegra de los datos consultables.
