@@ -188,3 +188,15 @@ python review_queue.py apply --runtime private/collection/runtime --decision pri
 La decisión requiere la ejecución, el insumo y la cabecera exacta de la bitácora exportada. Si otra operación avanzó la bitácora, debe exportarse una cola nueva y reconsiderarse la decisión. Se conserva el archivo de decisión original y se añade un evento; no se reescribe una revisión anterior ni se traslada automáticamente a otros cortes. Los estados admitidos son `en_revision`, `dato_confirmado`, `correccion_solicitada`, `diferencia_explicada` y `sin_evidencia_suficiente`. Una declaración de dato confirmado o diferencia explicada se identifica como decisión registrada; no acredita por sí sola una validación independiente.
 
 La identidad en este flujo local es **declarada**, no autenticada por la plataforma. No sustituye sus permisos ni autoriza sanciones. Las pruebas `test_review_queue.py` incluyen rechazo de decisiones repetidas, desactualizadas, con claves JSON duplicadas, otras fuentes, otras huellas y plantillas sin completar. No se registran revisiones reales a partir de las pruebas sintéticas.
+
+## Cobertura entre exportaciones y métricas sobre pares
+
+Un MAE/RMSE nulo sobre las celdas emparejadas no demuestra igualdad de la cobertura. `collection_impact.py` toma los originales de una ejecución de colecta aceptada, aplica la misma política a ambos lados y describe filas presentes en una sola exportación y diferencias de subtotales conocidos por mes/categoría. No consulta los archivos mutables. Los valores vacíos y las claves ambiguas se cuentan aparte: el subtotal registrado no es un total completo ni un KPI poblacional. Una ausencia no demuestra baja de producto ni fraude.
+
+```powershell
+python collection_impact.py --source-runtime private/collection/runtime --runtime private/collection-impact/runtime --output private/revision/impacto.json
+python collection_impact_report.py --runtime private/collection-impact/runtime --output private/revision/anexo.html
+python review_queue.py export --runtime private/collection-impact/runtime --output private/revision/cola-cobertura.json
+```
+
+El anexo mantiene originales, código y señal por fila en una custodia separada. Su informe coteja las celdas citadas con el XLSX de su lado de origen. Los hallazgos de cobertura y los de conteos del corte pueden solaparse; no deben sumarse como errores independientes ni como probabilidad de fraude. Este análisis se ejecuta expresamente por comando: su existencia no acredita que el observador lo regenere ni que se haya publicado en la web.
