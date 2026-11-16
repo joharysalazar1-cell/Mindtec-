@@ -7,7 +7,7 @@ import collections,math,re,statistics,unicodedata
 from pathlib import Path
 import engine,category_eligibility
 
-VERSION='perfect-store-operational/2.1.0'
+VERSION='perfect-store-operational/2.1.1'
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
 COMPONENTS=['Presencia','SKU núcleo','Frío','POP','Sin quiebre']
 
@@ -47,7 +47,7 @@ def evaluate(flat,catalog,policy,configuration):
   if record['id'] in excluded:continue
   r=record;coolers=flat.groups(r,'rep_enfriador');prices=flat.groups(r,'rep_precio');stock=flat.groups(r,'rep_stock_empresa')
   routes=set(flat.bindings[r['form']])|{p for ps in flat.ambiguous[r['form']].values() for p in ps}
-  pops=[flat.query(r,p) for p in routes if re.search(r'/(marcas|empresas)_material_',p)]
+  pops=[flat.query(r,p) for p in sorted(routes) if re.search(r'/(marcas|empresas)_material_',p)]
   prepared[r['id']]={'coolers':coolers,'prices':prices,'stock':stock,'pops':pops,'routes':routes}
  for entry in sorted(catalog,key=engine.canonical):
   cat=entry['category'];code=entry['brand_code'];brand=entry['brand'];co=owner(code,brand);config_key=engine.canonical([cat,code,brand]);reference=refs_by_key.get(config_key)
@@ -59,7 +59,7 @@ def evaluate(flat,catalog,policy,configuration):
     if len(rule_matches)>1:raise ValueError('Parent gate rules overlap for category')
     options={};positive_sibling_answers=[]
     if rule_matches:
-     prefix,rule=rule_matches[0];broad=suffix(rule['broad_suffix']);registry=suffix(rule['registry_suffix']);sibling_routes=[route for route in p['routes'] if route.split('/')[-1].startswith('vende_'+prefix)]
+     prefix,rule=rule_matches[0];broad=suffix(rule['broad_suffix']);registry=suffix(rule['registry_suffix']);sibling_routes=[route for route in sorted(p['routes']) if route.split('/')[-1].startswith('vende_'+prefix)]
      positive_sibling_answers=[flat.query(r,route) for route in sibling_routes if yesno(flat.query(r,route))=='si']
      options={'parent_code':rule['parent_code'],'broad':broad,'registry':registry,'allowed_registry_codes':rule['allowed_registry_codes'],'positive_sibling':bool(positive_sibling_answers)}
     positive_repeat=any(observed(fs.get('marca_act_'+cat,missing('marca_act_'+cat))) and fs['marca_act_'+cat]['value'] not in (None,'') for fs in repeats.values())

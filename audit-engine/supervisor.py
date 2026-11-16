@@ -5,8 +5,8 @@ import windows_job
 
 ROOT=Path(__file__).resolve().parent
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
-JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime']}
-JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py'}
+JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime'],'perfect_store':['admission','runtime','report_dir']}
+JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py','perfect_store':'perfect_store_watch.py'}
 def canonical(v):return json.dumps(v,sort_keys=True,ensure_ascii=False,separators=(',',':'))
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def atomic(path,value):
@@ -40,7 +40,7 @@ def config_file(path):
  if len(raw)>100000:raise ValueError('Supervisor configuration exceeds limit')
  config=json.loads(raw)
  if config.get('schema')!='mindtec-supervisor/1' or not isinstance(config.get('jobs'),list) or not config['jobs']:raise ValueError('Supervisor contract required')
- names=set();runtimes=set();feeds=[];outboxes=[];publishers=[];comparisons=[]
+ names=set();runtimes=set();feeds=[];outboxes=[];publishers=[];comparisons=[];perfect_stores=[]
  for job in config['jobs']:
   if not isinstance(job,dict) or not isinstance(job.get('kind'),str) or job['kind'] not in JOB_FIELDS or not isinstance(job.get('name'),str) or not job['name'].strip() or job['name'] in names:raise ValueError('Unique named supported observer jobs required')
   names.add(job['name'])
@@ -51,6 +51,13 @@ def config_file(path):
   runtimes.add(root)
   interval=job.get('interval',10)
   if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 1<=interval<=(86400 if job['kind']=='feed' else 3600):raise ValueError('Observer interval outside bounds')
+  if job['kind']=='perfect_store':
+   from perfect_store_admission import contract
+   admission_path=Path(job['admission']).resolve();report_dir=Path(job['report_dir']).resolve()
+   if interval<30 or admission_path.is_relative_to(root) or admission_path.is_relative_to(report_dir):raise ValueError('Perfect Store requires separate admission and interval of at least 30 seconds')
+   with admission_path.open('rb') as f:admission_raw=f.read(100001)
+   if len(admission_raw)>100000:raise ValueError('Perfect Store admission exceeds limit')
+   contract(admission_raw,root,report_dir);perfect_stores.append(job)
   if job['kind']=='collection':
    if interval<10:raise ValueError('Collection polling interval must be at least 10 seconds')
    inputs=[Path(job[k]).resolve() for k in ['source','policy','crosswalk']]
@@ -85,6 +92,11 @@ def config_file(path):
    if Path(feed['runtime']).resolve()!=root or interval!=feed['interval']:raise ValueError('Feed runtime and interval must match its configuration')
    feeds.append(feed)
   if job.get('initial_reference') and not Path(job['initial_reference']).is_absolute():raise ValueError('Absolute bootstrap path required')
+ report_dirs=set()
+ for job in perfect_stores:
+  report_dir=Path(job['report_dir']).resolve()
+  if report_dir in report_dirs or any(report_dir.is_relative_to(r) or r.is_relative_to(report_dir) for r in runtimes):raise ValueError('Perfect Store reports must be separate from all custody runtimes')
+  report_dirs.add(report_dir)
  targets=set()
  for feed in feeds:
   target=Path(feed['audit_runtime']).resolve()
@@ -132,7 +144,7 @@ def health(job,pid,clock=None):
   if h.get('pid')!=pid:return {'status':'awaiting_owned_health','reason':'health_belongs_to_another_process'}
   if age< -5 or age>max(30,job.get('interval',10)*4):return {'status':'degraded','reason':'heartbeat_outside_window','age_seconds':round(age,1)}
   # Health never authorizes termination. Only Popen.poll establishes an exit.
-  if job['kind']=='collection':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery')}
+  if job['kind'] in ('collection','perfect_store'):return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),**({'report_path':h.get('report_path'),'finding_count':h.get('finding_count')} if job['kind']=='perfect_store' else {})}
   if job['kind']=='scan_comparison':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'comparison_custody_verified':h.get('comparison_custody_verified')}
   return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id') or (h.get('last_success') or {}).get('run_id'),'error_type':h.get('error_type'),**({'reason':h.get('reason'),'http_status':h.get('http_status')} if job['kind']=='feed' else {}),**({'state':h.get('state'),'delivery':h.get('delivery'),'reason':h.get('reason')} if job['kind']=='outbox' else {}),**({'state':h.get('state'),'reason':h.get('reason'),'remote_verified_this_poll':h.get('remote_verified_this_poll'),'last_remote_check_at':h.get('last_remote_check_at')} if job['kind']=='publisher' else {})}
  except (OSError,ValueError,KeyError,TypeError):return {'status':'awaiting_owned_health','reason':'unreadable_health'}

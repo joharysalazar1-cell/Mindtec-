@@ -16,6 +16,18 @@ def adapter(overrides=None,extra=None):
  w,h=fixture(headers,list(values.values()),answers);return FlatAnswers(w,h)
 
 class PerfectStoreTests(unittest.TestCase):
+ def test_result_is_reproducible_across_python_hash_seeds(self):
+  import os,subprocess,sys
+  from pathlib import Path
+  script="""import copy,engine
+from test_perfect_store import adapter,CATALOG,CONFIG
+from perfect_store import evaluate
+c=copy.deepcopy(CONFIG);c['parent_gate_rules']={'bsa_':{'parent_code':'bebidas_sin_alcohol','broad_suffix':'categorias_vendidas','registry_suffix':'cat_registro_categorias','allowed_registry_codes':['bebidas_sin_alcohol','lacteos']}}
+a=adapter(extra={'g/categorias_vendidas':'bebidas_sin_alcohol lacteos','g/cat_registro_categorias':'lacteos','g/vende_bsa_agua':'si','g/vende_bsa_jugos':'si'})
+print(engine.sha(engine.canonical(evaluate(a,CATALOG,{'exclusions':[]},c))))
+"""
+  outputs=[subprocess.run([sys.executable,'-c',script],cwd=Path(__file__).parent,env={**os.environ,'PYTHONHASHSEED':seed},capture_output=True,text=True,check=True,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0)).stdout.strip() for seed in ['11','77','1001']]
+  self.assertEqual(len(set(outputs)),1)
  def test_parent_exclusion_requires_agreement_and_retains_support(self):
   import copy
   config=copy.deepcopy(CONFIG);config['parent_gate_rules']={'bsa_':{'parent_code':'bebidas_sin_alcohol','broad_suffix':'categorias_vendidas','registry_suffix':'cat_registro_categorias','allowed_registry_codes':['bebidas_sin_alcohol','lacteos']}}

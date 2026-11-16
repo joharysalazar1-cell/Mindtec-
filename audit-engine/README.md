@@ -219,3 +219,18 @@ El evaluador es una biblioteca y el informe opera sobre una ejecución aceptada 
 
 
 `category_eligibility.py` resuelve una rama hija no respondida solo cuando dos listas parentales explícitas y compatibles excluyen su familia y no existe evidencia positiva en sus subcategorías. Los conflictos permanecen documentados. `perfect_store_findings.py` agrupa contradicciones por visita, mes, familia y regla; conserva referencias a respuestas y celdas originales. Sus señales se admiten en una ejecución independiente del motor y pueden exportarse con `review_queue.py`; no deciden fraude, no modifican fuentes y no registran revisiones humanas automáticas. El informe muestra las señales y las exclusiones parentales con su respaldo.
+
+
+## Observador continuo de Perfect Store
+
+`perfect_store_watch.py` observa una admision local explicita, sin red ni publicacion automatica. La admision `mindtec-perfect-store-admission/1` requiere version, etiqueta y seis fuentes distintas con rutas absolutas y SHA-256: `detailed_workbook`, `normalized_result_workbook`, `historical_question_schema`, `operational_configuration`, `policy_file`, `identity_crosswalk`. Tambien exige `expected_detail_counts`, `expected_normalized_counts` y `expected_eligible_counts`, con conteos positivos y los mismos meses YYYY-MM. Una nueva colecta se admite actualizando este manifiesto deliberadamente cuando sus archivos completos esten descargados; reemplazar un Excel sin actualizar su huella no admite un nuevo corte.
+
+`perfect_store_admission.py` verifica huellas, cobertura declarada, identidades unicas y correspondencia exacta de visita/mes entre ambos archivos tras las exclusiones documentadas. Los renglones de catalogo deben tener padre compatible. No basta que coincidan los conteos. Las preguntas historicas aportan etiquetas/rutas, nunca valores para rellenar el corte nuevo.
+
+```text
+python perfect_store_watch.py --admission private/perfect-store/admission.json --runtime private/perfect-store/runtime --report-dir private/perfect-store/reports --interval 60
+```
+
+El supervisor admite `kind: perfect_store` con rutas absolutas `admission`, `runtime` y `report_dir`, intervalo minimo30segundos y salidas separadas de toda custodia. Antes de aceptar, el observador valida aritmetica, agregados y todas las celdas citadas, conserva fuentes/configuracion/codigo, registra las contradicciones y genera un HTML inmutable. El informe se retiene tambien como envoltorio JSON/base64 con huella del HTML original. La salud enlaza su ruta y ejecucion. Si falta la copia HTML se restaura desde custodia; una copia alterada se senala sin sobrescribirla. Los candidatos rechazados se conservan, no reemplazan el ultimo resultado aceptado y no acumulan eventos identicos en cada sondeo. Un cambio del codigo exige reiniciar el observador y queda ligado a la nueva ejecucion.
+
+El informe web publicado sigue siendo una instantanea hasta una publicacion manual; el observador solo actualiza resultados locales. La admision explicita no garantiza la veracidad en campo ni certifica la formula oficial, y las senales requieren revision humana. El registro de salud no prueba que un proceso siga vivo: se contrasta con su proceso propietario al verificar la instalacion.
