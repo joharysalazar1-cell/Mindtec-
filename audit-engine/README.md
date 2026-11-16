@@ -250,3 +250,17 @@ python numeric_distribution_report.py --runtime private/numeric-distribution/run
 Las pruebas enumeran asignaciones posibles de datos faltantes para comprobar limites, distinguen base cero de porcentaje cero y prueban el agrupamiento anual con denominadores desiguales. La derivacion comparte la presencia del PS operativo, por lo que no se presenta como una segunda observacion independiente del campo.
 
 Los resultados de distribucion conservan tambien las senales de categoria de cada visita y su regla/motivo de elegibilidad. Un porcentaje aritmeticamente completo no suprime una contradiccion de fuente ni equivale a una revision humana favorable.
+
+
+## Share de estante con denominador verificable
+
+`shelf_share.py` vuelve a leer las caras de la colecta original y usa la elegibilidad de categoria de la ejecucion PS aceptada. Exige que coincidan cantidad esperada de marcas, seleccion, identidades y repeticiones; rechaza conteos vacios/ambiguos, negativos, fraccionarios, booleanos o textuales como medidas confirmadas. No mezcla caras frias ni promedia porcentajes por tienda. Las ramas otras marcas y sus columnas sin vinculo se conservan para revision: no suma padre e hijos por suposicion. La vinculacion de columnas usa nombres de categoria exactos, no prefijos que mezclen categorias similares.
+
+Si falta cualquier visita aplicable, el share de toda la base queda pendiente. Se mantienen las caras conocidas de marca/categoria como subtotales, sin presentarlas como totales ni sustituir vacios por cero. Sin tiendas elegibles, cero caras observadas y un share real de cero son estados diferentes. El ano observado agrupa sumas de caras y conserva el alcance de los meses disponibles. Las incidencias se agrupan por visita y categoria, sin multiplicarlas por marca ni decidir fraude.
+
+```text
+python shelf_share_run.py --provenance-runtime private/numeric-distribution/runtime --runtime private/shelf-share/runtime
+python shelf_share_report.py --runtime private/shelf-share/runtime --output private/revision/share-estante.html
+```
+
+El ejecutor utiliza la procedencia PS aceptada y conservada en la custodia de distribucion; no usa los porcentajes de distribucion como entrada numerica. Conserva originales, admision, politica, fuente PS, su implementacion y el codigo del nuevo calculo. El informe incluye filtros, graficos de resultados completos, detalle por visita e incidencias con celdas; no se publica un porcentaje completo para subtotales. Son comandos locales, no otro observador instalado ni sincronizacion con el sitio. La equivalencia con el panel oficial requiere cortes y reglas compatibles.
