@@ -264,3 +264,14 @@ python shelf_share_report.py --runtime private/shelf-share/runtime --output priv
 ```
 
 El ejecutor utiliza la procedencia PS aceptada y conservada en la custodia de distribucion; no usa los porcentajes de distribucion como entrada numerica. Conserva originales, admision, politica, fuente PS, su implementacion y el codigo del nuevo calculo. El informe incluye filtros, graficos de resultados completos, detalle por visita e incidencias con celdas; no se publica un porcentaje completo para subtotales. Son comandos locales, no otro observador instalado ni sincronizacion con el sitio. La equivalencia con el panel oficial requiere cortes y reglas compatibles.
+
+
+### Estructuras verificadas de otras marcas
+
+`other_faces.py` aplica una configuracion `mindtec-other-face-layouts/1` ligada al SHA-256 del XLSX detallado y al nombre exacto del formulario. Sin configuracion mantiene la rama pendiente. Se admiten dos estructuras: conteo agregado en la fila principal, o suma de hijas cuya primera fila coincide con indice del padre y ordinal1 y cuyas filas posteriores tienen rutas completas explicitas. Exige numero de hijas, ordinales, nombre de producto y caras validos. Un padre con caras simultaneas en la estructura anidada, filas adicionales, alias contradictorios o celdas no vinculadas impiden aceptar el total. Nunca agrega padre e hijos juntos ni convierte el nombre/SKU escrito en una marca maestra.
+
+```text
+python shelf_share_run.py --provenance-runtime private/numeric-distribution/runtime --runtime private/shelf-share/runtime --other-rules private/other-layout-rules.json
+```
+
+La configuracion exige observaciones por formulario con rutas absolutas y SHA-256, conservadas como envoltorios base64 con huella del original. Cambiar el archivo fuente o la evidencia sin nueva admision rechaza el calculo. Las referencias reconstruidas indican si el vinculo proviene de ruta completa o de la regla admitida de primera hija. Es una interpretacion tecnica documentada del formato, no una certificacion oficial ni una revision humana favorable sobre la encuesta.
