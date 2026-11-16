@@ -4,7 +4,7 @@ import argparse, collections, datetime as dt, hashlib, json, math, os,base64
 from pathlib import Path
 import re, sqlite3, time, tempfile,contextlib
 
-ENGINE_VERSION='1.1.0'
+ENGINE_VERSION='1.1.1'
 RULES={
  'duplicate_visit':('1','high','Clave de envío duplicada'),
  'conflicting_answer':('1','high','Respuestas incompatibles en una misma ruta'),
@@ -22,7 +22,17 @@ def code_bundle(files):return canonical({'schema':'mindtec-code-bundle/2','files
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def load_json_bytes(raw):
  def reject(v):raise ValueError('Non-finite JSON number')
- return json.loads(raw.decode('utf-8-sig'),parse_constant=reject)
+ def pairs(items):
+  result={}
+  for key,value in items:
+   if key in result:raise ValueError('Duplicate JSON key')
+   result[key]=value
+  return result
+ def finite_float(value):
+  number=float(value)
+  if not math.isfinite(number):raise ValueError('Non-finite JSON number')
+  return number
+ return json.loads(raw.decode('utf-8-sig'),object_pairs_hook=pairs,parse_constant=reject,parse_float=finite_float)
 def validate_policy(p):
  if p.get('schema')!='mindtec-audit-policy/1' or not isinstance(p.get('version'),str) or not p['version'].strip():raise ValueError('Invalid policy schema/version')
  if not isinstance(p.get('max_source_bytes'),int) or not 0<p['max_source_bytes']<=100_000_000:raise ValueError('Invalid source size limit')

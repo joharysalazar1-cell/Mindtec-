@@ -17,6 +17,8 @@ Las pruebas usan datos sintéticos. Los datos reales, informes, XLSX, imágenes,
 
 Prepare una exportación completa con `envios`, `total` y respuestas `ruta`/`valor`, más una política derivada de `policy.example.json`. Las exclusiones necesitan ID, motivo y evidencia.
 
+La carga JSON manual rechaza claves repetidas en cualquier nivel, incluidas claves equivalentes mediante escapes Unicode, y números no finitos o desbordados. No selecciona silenciosamente el último valor. El observador conserva los bytes rechazados y la última aceptación válida. Un Excel de encuestas o de resultados no sustituye este contrato JSON: requiere un adaptador y un cotejo explícitos antes de alimentar este motor. El adaptador XLSX de facturas tiene un alcance diferente.
+
 ```powershell
 python engine.py run --runtime private/scan-runtime --source private/scan.json --policy private/policy.json
 python engine.py watch --runtime private/scan-runtime --source private/scan.json --policy private/policy.json --interval 10
