@@ -17,6 +17,9 @@ class Tests(unittest.TestCase):
    with self.assertRaises(ValueError):nd.evaluate(self.source(),CATALOG,cohort)
  def test_pending_category_does_not_contribute_a_confirmed_presence(self):
   r=nd.evaluate(self.source({'g/vende_bsa_gaseosas':'no'}),CATALOG,[('1','2026-09')]);s=r['monthly'][0];self.assertEqual(s['eligibility_pending'],1);self.assertEqual(s['presence_confirmed'],0);self.assertIsNone(s['value'])
+ def test_exact_arithmetic_does_not_hide_source_category_signals(self):
+  config=copy.deepcopy(CONFIG);config['parent_gate_rules']={'bsa_':{'parent_code':'bebidas_sin_alcohol','broad_suffix':'categorias_vendidas','registry_suffix':'cat_registro_categorias','allowed_registry_codes':['bebidas_sin_alcohol','lacteos']}}
+  ps=evaluate(adapter(extra={'g/categorias_vendidas':'bebidas_sin_alcohol lacteos','g/cat_registro_categorias':'lacteos'}),CATALOG,{'exclusions':[]},config);r=nd.evaluate(ps,CATALOG,[('1','2026-09')]);self.assertEqual(r['monthly'][0]['value'],100);self.assertEqual(r['monthly'][0]['store_months_with_category_signals'],1);self.assertIn('parent_category_lists_disagree',r['stores'][0]['category_signals']);self.assertEqual(r['stores'][0]['eligibility_method'],'explicit_subcategory_answer')
  def test_bounds_match_exhaustive_missing_data_assignments(self):
   # Three confirmed eligible stores: one yes, one no, one missing;
   # two stores with unknown eligibility/presence. Enumerate possible worlds.

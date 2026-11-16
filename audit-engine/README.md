@@ -248,3 +248,5 @@ python numeric_distribution_report.py --runtime private/numeric-distribution/run
 ```
 
 Las pruebas enumeran asignaciones posibles de datos faltantes para comprobar limites, distinguen base cero de porcentaje cero y prueban el agrupamiento anual con denominadores desiguales. La derivacion comparte la presencia del PS operativo, por lo que no se presenta como una segunda observacion independiente del campo.
+
+Los resultados de distribucion conservan tambien las senales de categoria de cada visita y su regla/motivo de elegibilidad. Un porcentaje aritmeticamente completo no suprime una contradiccion de fuente ni equivale a una revision humana favorable.

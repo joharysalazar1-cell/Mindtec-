@@ -3,7 +3,7 @@ import collections
 from pathlib import Path
 import engine,perfect_store_check
 
-VERSION='declared-numeric-distribution/1.0.0'
+VERSION='declared-numeric-distribution/1.1.0'
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
 
 def aggregate(rows,period,kind):
@@ -12,7 +12,7 @@ def aggregate(rows,period,kind):
  absent=sum(r['eligible'] is True and r['presence']==0 for r in rows)
  pending=eligible-present-absent;eligibility_pending=sum(r['eligible'] is None for r in rows);maximum_denominator=eligible+eligibility_pending
  complete=eligible>0 and not pending and not eligibility_pending
- return {'period':period,'period_kind':kind,'brand':rows[0]['brand'],'brand_code':rows[0]['brand_code'],'category':rows[0]['category'],'cohort_store_months':len(rows),'eligible_confirmed':eligible,'ineligible_confirmed':sum(r['eligible'] is False for r in rows),'eligibility_pending':eligibility_pending,'presence_confirmed':present,'absence_confirmed':absent,'presence_pending_in_eligible':pending,'numerator':present if complete else None,'denominator':eligible if complete else None,'value':100*present/eligible if complete else None,'minimum':100*present/maximum_denominator if maximum_denominator else None,'maximum':100*(present+pending+eligibility_pending)/maximum_denominator if maximum_denominator else None,'state':'complete' if complete else 'pending_observations' if maximum_denominator else 'no_eligible_base','months_observed':sorted({r['month'] for r in rows}),'store_rows':[r['id'] for r in rows]}
+ return {'period':period,'period_kind':kind,'brand':rows[0]['brand'],'brand_code':rows[0]['brand_code'],'category':rows[0]['category'],'cohort_store_months':len(rows),'store_months_with_category_signals':sum(bool(r.get('category_signals')) for r in rows),'eligible_confirmed':eligible,'ineligible_confirmed':sum(r['eligible'] is False for r in rows),'eligibility_pending':eligibility_pending,'presence_confirmed':present,'absence_confirmed':absent,'presence_pending_in_eligible':pending,'numerator':present if complete else None,'denominator':eligible if complete else None,'value':100*present/eligible if complete else None,'minimum':100*present/maximum_denominator if maximum_denominator else None,'maximum':100*(present+pending+eligibility_pending)/maximum_denominator if maximum_denominator else None,'state':'complete' if complete else 'pending_observations' if maximum_denominator else 'no_eligible_base','months_observed':sorted({r['month'] for r in rows}),'store_rows':[r['id'] for r in rows]}
 
 def evaluate(ps,catalog,cohort):
  """Cohort contains already policy-eligible visit/month pairs; absence is explicit."""
@@ -50,7 +50,7 @@ def evaluate(ps,catalog,cohort):
      if type(p['value']) is not int or p['value'] not in (0,1):raise ValueError('Explicit binary presence required')
      presence=p['value']
    if not support or any(k not in ps['answer_evidence'] for k in support):raise ValueError('Original presence/eligibility answer evidence required')
-   row={'kobo_id':visit,'month':month,'category':category,'brand_code':code,'brand':brand,'eligible':c['eligible'],'presence':presence,'ps_detail_index':detail_index,'eligibility_check_index':check_index,'answer_ids':sorted(support)}
+   row={'kobo_id':visit,'month':month,'category':category,'brand_code':code,'brand':brand,'eligible':c['eligible'],'presence':presence,'category_signals':list(c['signals']),'eligibility_method':c['method'],'eligibility_reason':c['reason'],'ps_detail_index':detail_index,'eligibility_check_index':check_index,'answer_ids':sorted(support)}
    row['id']=engine.sha(engine.canonical([visit,month,category,code,brand]));rows.append(row);monthly[(month,category,code,brand)].append(row);annual[(month[:4],category,code,brand)].append(row)
  if used_details!=set(details):raise ValueError('Unexpected brand decisions outside admitted cohort/catalogue')
  used_answers={k for row in rows for k in row['answer_ids']};answers={k:ps['answer_evidence'][k] for k in sorted(used_answers)};cells={cid:ps['cells'][cid] for a in answers.values() for cid in a['cell_ids']}
