@@ -20,3 +20,4 @@ __pycache__/
 *.json
 !policy.example.json
 !feed.example.json
+!sync-client.example.json
