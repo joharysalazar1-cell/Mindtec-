@@ -43,6 +43,18 @@ class Tests(unittest.TestCase):
  def test_ambiguous_catalogue_code_does_not_duplicate_a_brand_share(self):
   a,ps=source();catalog=CATALOG+[dict(CATALOG[0],brand='Another unresolved label')]
   with self.assertRaises(ValueError):share.evaluate(a,catalog,[('1','2026-09')],ps['eligibility_checks'],ps['answer_evidence'],ps['cells'])
+ def shared_name(self,a,index=3,explicit_value=''):
+  question='¿Cuál es el nombre de esta otra marca?['+str(index)+']';first='rep_bsa_gaseosas['+str(index)+']/otra_marca_bsa_gaseosas';second='rep_bsa_agua['+str(index)+']/otra_marca_bsa_agua';aliases=[question+' ('+first+')',question+' ('+second+')']
+  for h,v in [(question,'Foreign-category name'),(aliases[0],explicit_value),(aliases[1],'')]:self.add_unmapped(a,h,v);a.unmapped['form'].remove(h)
+  a.bindings['form'][first]=[a.columns[aliases[0]]];a.bindings['form'][second]=[a.columns[aliases[1]]];a.ambiguous['form'][question]=[first,second]
+ def test_shared_name_outside_confirmed_enumeration_is_not_a_brand_row(self):
+  a,ps=source();self.shared_name(a);r=self.calc(a,ps);self.assertEqual(r['monthly'][0]['value'],25);inv=r['category_inventories'][0];self.assertEqual(len(inv['rows']),2);self.assertEqual(len(inv['unattributed_auxiliary_observations']),1);cid=inv['unattributed_auxiliary_observations'][0]['cell_id'];self.assertEqual(r['cells'][cid]['value'],'Foreign-category name');self.assertEqual(r['monthly'][0]['store_months_with_auxiliary_ambiguity'],1)
+ def test_a_nonempty_explicit_alias_cannot_be_dismissed_as_shared_activity(self):
+  a,ps=source();self.shared_name(a,explicit_value='A row-specific name');r=self.calc(a,ps);self.assertIsNone(r['monthly'][0]['value']);self.assertEqual(r['category_inventories'][0]['unattributed_auxiliary_observations'],[])
+ def test_extra_zero_face_count_is_row_evidence_and_stays_pending(self):
+  a,ps=source();self.shared_name(a);h='caras_bsa_gaseosas[3]';self.add_unmapped(a,h,0);a.unmapped['form'].remove(h);a.bindings['form']['rep_bsa_gaseosas[3]/caras_bsa_gaseosas']=[a.columns[h]];r=self.calc(a,ps);self.assertIsNone(r['monthly'][0]['value']);self.assertEqual(r['category_inventories'][0]['unattributed_auxiliary_observations'],[])
+ def test_shared_name_does_not_complete_a_missing_row_inside_the_count(self):
+  a,ps=source({'g/n_bsa_gaseosas':3},{'g/marcas_bsa_gaseosas':'coca_cola pepsi extra'});self.shared_name(a);r=self.calc(a,ps);self.assertIsNone(r['monthly'][0]['value']);self.assertEqual(r['category_inventories'][0]['unattributed_auxiliary_observations'],[])
  def test_evidence_resolves_without_mutating_source(self):
   a,ps=source();before=copy.deepcopy(ps);r=self.calc(a,ps);self.assertEqual(ps,before)
   for row in r['stores']:

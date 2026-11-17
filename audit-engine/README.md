@@ -275,3 +275,10 @@ python shelf_share_run.py --provenance-runtime private/numeric-distribution/runt
 ```
 
 La configuracion exige observaciones por formulario con rutas absolutas y SHA-256, conservadas como envoltorios base64 con huella del original. Cambiar el archivo fuente o la evidencia sin nueva admision rechaza el calculo. Las referencias reconstruidas indican si el vinculo proviene de ruta completa o de la regla admitida de primera hija. Es una interpretacion tecnica documentada del formato, no una certificacion oficial ni una revision humana favorable sobre la encuesta.
+
+
+### Actividad ambigua fuera de la enumeracion de marcas
+
+El lector generico conserva repeticiones candidatas cuando una celda compartida tiene texto. El calculo de estante distingue esa incertidumbre de evidencia de una fila fisica adicional: solo separa el nombre generico ambiguo fuera del rango declarado cuando numero esperado y seleccion unica coinciden, todos sus valores no vacios proceden exclusivamente del encabezado compartido «Cual es el nombre de esta otra marca», y no hay valor propio en alias explicitos, codigos, caras, SKU u otro campo. Si el nombre esta dentro de las filas esperadas o existe cualquier evidencia especifica de fila (incluso0caras), mantiene el bloqueo. Comprueba tambien indices de repeticion completos.
+
+La celda y sus rutas candidatas quedan conservadas sin asignarlas a ninguna marca/categoria. Se registran observaciones informativas agrupadas por celda original; no se multiplican por categoria ni se presentan como revisiones humanas favorables. Se distinguen de los bloqueos que impiden un denominador. El informe muestra ambas clases y senala los resultados completos que conservan incertidumbre de texto auxiliar.

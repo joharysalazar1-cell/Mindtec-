@@ -3,7 +3,7 @@ import collections,math,re
 from pathlib import Path
 import engine,other_faces
 
-VERSION='declared-shelf-share/1.1.0'
+VERSION='declared-shelf-share/1.2.0'
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
 OTHER={'otro','otras','otras_marcas','other'}
 
@@ -12,16 +12,35 @@ def integer(a):
  return int(v) if a.get('state')=='observed' and type(v) in (int,float) and math.isfinite(v) and v>=0 and float(v).is_integer() else None
 
 def inventory(flat,record,category,decision,other_rules=None):
- answers=[];signals=[];other_branches=[];consumed=set()
+ answers=[];signals=[];other_branches=[];consumed=set();unattributed=[]
  def keep(a):answers.append(a);return a
  if decision['eligible'] is False:return {'eligible':False,'state':'not_applicable','faces':None,'faces_by_code':{},'signals':[],'answers':[]}
  if decision['eligible'] is None:signals.append('category_eligibility_pending')
  n=keep(flat.suffix(record,'n_'+category));choice=keep(flat.suffix(record,'marcas_'+category));expected=integer(n);selected=choice['value'].split() if choice['state']=='observed' and isinstance(choice['value'],str) else None
  groups=flat.groups(record,'rep_'+category);faces={};rows=[]
+ # A shared, ambiguous free-text cell is not evidence of an additional brand
+ # repetition. Keep it unresolved, without assigning its text to this category.
+ if expected is not None and selected is not None and len(selected)==len(set(selected))==expected:
+  for group,fields in list(groups.items()):
+   match=re.fullmatch(r'rep_'+re.escape(category)+r'\[([1-9]\d*)\]',group)
+   if not match or int(match[1])<=expected:continue
+   filled=[(field,a) for field,a in fields.items() if any(c['value'] not in (None,'') for c in a['cells'])]
+   if not filled:continue
+   safe=all(field=='otra_marca_'+category and a['state']=='ambiguous_header_binding' and all(re.fullmatch(r'¿Cuál es el nombre de esta otra marca\?\[[1-9]\d*\]',c['column']) for c in a['cells'] if c['value'] not in (None,'')) for field,a in filled)
+   if not safe:continue
+   for _,a in filled:
+    keep(a)
+    for cell in a['cells']:
+     if cell['value'] in (None,''):continue
+     candidates=flat.ambiguous[record['form']].get(cell['column'],[])
+     if not candidates:raise ValueError('Shared auxiliary observation lacks candidate routes')
+     unattributed.append({'group':group,'cell_id':engine.sha(engine.canonical(cell)),'candidate_routes':sorted(candidates),'reason':'Shared ambiguous name outside the explicitly enumerated brand repetitions; not assigned to any category.'})
+   del groups[group]
  if expected is None:signals.append('brand_enumeration_count_unresolved')
  if selected is None:signals.append('brand_selection_unresolved')
  elif len(set(selected))!=len(selected):signals.append('brand_selection_repeated')
  if expected is not None and (expected!=len(groups) or selected is not None and expected!=len(selected)):signals.append('brand_enumeration_incomplete')
+ if expected is not None and {int(re.fullmatch(r'rep_'+re.escape(category)+r'\[([1-9]\d*)\]',g)[1]) for g in groups}!=set(range(1,expected+1)):signals.append('brand_repetition_indices_disagree')
  for name,fields in sorted(groups.items()):
   def field(suffix):return keep(fields.get(suffix,{'route':name+'/'+suffix,'state':'route_not_mapped','value':None,'cells':[]}))
   code=field('marca_act_'+category);label=field('marca_lbl_'+category);count=field('caras_'+category);value=integer(count);c=code['value'] if code['state']=='observed' and isinstance(code['value'],str) and code['value'] else None
@@ -43,12 +62,12 @@ def inventory(flat,record,category,decision,other_rules=None):
   if other_token.search(header) and record['row']['cells'][flat.columns[header]] not in (None,'') and header not in consumed:
    keep({'route':None,'state':'unmapped_other_brand_column','value':None,'cells':[flat.cell(record,flat.columns[header])]});signals.append('unmapped_other_brand_observation')
  signals=sorted(set(signals));complete=not signals
- return {'eligible':decision['eligible'],'state':'complete' if complete else 'pending','faces':sum(faces.values()) if complete else None,'known_faces_subtotal_not_total':sum(v for v in faces.values() if v is not None),'faces_by_code':faces,'rows':rows,'other_branches':other_branches,'signals':signals,'answers':answers}
+ return {'eligible':decision['eligible'],'state':'complete' if complete else 'pending','faces':sum(faces.values()) if complete else None,'known_faces_subtotal_not_total':sum(v for v in faces.values() if v is not None),'faces_by_code':faces,'rows':rows,'other_branches':other_branches,'unattributed_auxiliary_observations':unattributed,'signals':signals,'answers':answers}
 
 def aggregate(rows,period,kind):
  applicable=[r for r in rows if r['eligible'] is not False];pending=[r for r in applicable if r['state']!='complete'];complete=bool(applicable) and not pending
  numerator=sum(r['brand_faces'] for r in applicable) if complete else None;denominator=sum(r['category_faces'] for r in applicable) if complete else None
- return {'period':period,'period_kind':kind,'brand':rows[0]['brand'],'brand_code':rows[0]['brand_code'],'category':rows[0]['category'],'cohort_store_months':len(rows),'applicable_store_months':len(applicable),'pending_store_months':len(pending),'store_months_with_category_signals':sum(bool(r['category_signals']) for r in rows),'numerator':numerator,'denominator':denominator,'value':100*numerator/denominator if denominator else None,'state':'pending_observations' if pending else 'no_eligible_base' if not applicable else 'zero_observed_faces' if not denominator else 'complete','months_observed':sorted({r['month'] for r in rows}),'store_rows':[r['id'] for r in rows]}
+ return {'period':period,'period_kind':kind,'brand':rows[0]['brand'],'brand_code':rows[0]['brand_code'],'category':rows[0]['category'],'cohort_store_months':len(rows),'applicable_store_months':len(applicable),'pending_store_months':len(pending),'store_months_with_category_signals':sum(bool(r['category_signals']) for r in rows),'store_months_with_auxiliary_ambiguity':sum(bool(r.get('unattributed_auxiliary_cell_ids')) for r in rows),'numerator':numerator,'denominator':denominator,'value':100*numerator/denominator if denominator else None,'state':'pending_observations' if pending else 'no_eligible_base' if not applicable else 'zero_observed_faces' if not denominator else 'complete','months_observed':sorted({r['month'] for r in rows}),'store_rows':[r['id'] for r in rows]}
 
 def evaluate(flat,catalog,cohort,eligibility_checks,source_answers,source_cells,other_rules=None):
  if other_rules is not None:
@@ -89,5 +108,5 @@ def evaluate(flat,catalog,cohort,eligibility_checks,source_answers,source_cells,
    decision=decisions[(visit,month,cat)];p=prepared[(visit,month,cat)];value=p['faces_by_code'].get(code,0) if p['state']=='complete' else None
    observed_brand=p['faces_by_code'].get(code) if code not in OTHER or p['state']=='complete' else None
    if p['state']=='complete' and code not in p['faces_by_code']:observed_brand=0
-   row={'kobo_id':visit,'month':month,'category':cat,'brand_code':code,'brand':brand,'eligible':p['eligible'],'state':p['state'],'brand_faces':value,'known_brand_faces_not_full_share':observed_brand,'category_faces':p['faces'],'known_category_faces_subtotal_not_total':p.get('known_faces_subtotal_not_total'),'signals':p['signals'],'category_signals':decision['signals'],'answer_ids':p['answer_ids']};row['id']=engine.sha(engine.canonical([visit,month,cat,code,brand]));rows.append(row);monthly[(month,cat,code,brand)].append(row);annual[(month[:4],cat,code,brand)].append(row)
+   row={'kobo_id':visit,'month':month,'category':cat,'brand_code':code,'brand':brand,'eligible':p['eligible'],'state':p['state'],'brand_faces':value,'known_brand_faces_not_full_share':observed_brand,'category_faces':p['faces'],'known_category_faces_subtotal_not_total':p.get('known_faces_subtotal_not_total'),'signals':p['signals'],'category_signals':decision['signals'],'unattributed_auxiliary_cell_ids':sorted({x['cell_id'] for x in p.get('unattributed_auxiliary_observations',[])}),'answer_ids':p['answer_ids']};row['id']=engine.sha(engine.canonical([visit,month,cat,code,brand]));rows.append(row);monthly[(month,cat,code,brand)].append(row);annual[(month[:4],cat,code,brand)].append(row)
  return {'schema':'mindtec-declared-shelf-share/1','version':VERSION,'source_sha256':flat.source_sha256,'unit':'%','formula':'100 * sum of brand shelf faces / sum of category shelf faces in admitted eligible store-months; no averaging of store percentages.','monthly':[aggregate(rs,k[0],'month') for k,rs in sorted(monthly.items())],'annual_observed_months':[aggregate(rs,k[0],'year_observed_months_pooled_faces') for k,rs in sorted(annual.items())],'stores':rows,'category_inventories':[dict(kobo_id=k[0],month=k[1],category=k[2],**p) for k,p in sorted(prepared.items())],'cells':cells,'answer_evidence':answers,'limits':['Other-brand branches require explicit mapping; parent and child face counts are never added speculatively.','Known face subtotals are not category totals and do not produce a full-cohort share.','Zero faces, no eligible base and pending observations are distinct.','Year view pools observed store-month faces, not complete calendar-year market share.','Category source signals remain visible; arithmetic completeness is not human validation or proof of field truth.','No official panel comparison or fraud determination is asserted.']}
