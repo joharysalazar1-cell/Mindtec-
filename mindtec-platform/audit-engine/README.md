@@ -1,23 +1,23 @@
-# Motor continuo de auditor�a MindTEC
+# Motor continuo de auditoría MindTEC
 
-Motor de lectura y control de calidad de datos con fuentes inmutables, reglas versionadas, bit�cora verificable y revisi�n humana. Una se�al no demuestra fraude ni provoca correcciones o sanciones autom�ticas. No se punt�an personas ni se infiere duraci�n de una encuesta a partir de su fecha de env�o.
+Motor de lectura y control de calidad de datos con fuentes inmutables, reglas versionadas, bitácora verificable y revisión humana. Una señal no demuestra fraude ni provoca correcciones o sanciones automáticas. No se puntúan personas ni se infiere duración de una encuesta a partir de su fecha de envío.
 
 ## Requisitos y comprobaciones
 
-Python 3.10 o posterior y biblioteca est�ndar. Los contrastes JavaScript requieren Node.js. La protecci�n nativa de procesos y la instalaci�n de tareas se prueban en Windows; sus pruebas se omiten en otros sistemas.
+Python 3.10 o posterior y biblioteca estándar. Los contrastes JavaScript requieren Node.js. La protección nativa de procesos y la instalación de tareas se prueban en Windows; sus pruebas se omiten en otros sistemas.
 
 ```powershell
 cd audit-engine
 python -m unittest -v
 ```
 
-Las pruebas usan datos sint�ticos. Los datos reales, informes, XLSX, im�genes, configuraciones activas, credenciales y bases de ejecuci�n se mantienen fuera del repositorio. Las plantillas JSON no contienen exclusiones reales ni secretos.
+Las pruebas usan datos sintéticos. Los datos reales, informes, XLSX, imágenes, configuraciones activas, credenciales y bases de ejecución se mantienen fuera del repositorio. Las plantillas JSON no contienen exclusiones reales ni secretos.
 
 ## Colecta Scan
 
-Prepare una exportaci�n completa con `envios`, `total` y respuestas `ruta`/`valor`, m�s una pol�tica derivada de `policy.example.json`. Las exclusiones necesitan ID, motivo y evidencia.
+Prepare una exportación completa con `envios`, `total` y respuestas `ruta`/`valor`, más una política derivada de `policy.example.json`. Las exclusiones necesitan ID, motivo y evidencia.
 
-La carga JSON manual rechaza claves repetidas en cualquier nivel, incluidas claves equivalentes mediante escapes Unicode, y n�meros no finitos o desbordados. No selecciona silenciosamente el �ltimo valor. El observador conserva los bytes rechazados y la �ltima aceptaci�n v�lida. Un Excel de encuestas o de resultados no sustituye este contrato JSON: requiere un adaptador y un cotejo expl�citos antes de alimentar este motor. El adaptador XLSX de facturas tiene un alcance diferente.
+La carga JSON manual rechaza claves repetidas en cualquier nivel, incluidas claves equivalentes mediante escapes Unicode, y números no finitos o desbordados. No selecciona silenciosamente el último valor. El observador conserva los bytes rechazados y la última aceptación válida. Un Excel de encuestas o de resultados no sustituye este contrato JSON: requiere un adaptador y un cotejo explícitos antes de alimentar este motor. El adaptador XLSX de facturas tiene un alcance diferente.
 
 ```powershell
 python engine.py run --runtime private/scan-runtime --source private/scan.json --policy private/policy.json
@@ -26,107 +26,107 @@ python engine.py verify --runtime private/scan-runtime
 python report.py --runtime private/scan-runtime --output private/informe.html
 ```
 
-Controles: claves duplicadas, respuestas incompatibles, contradicciones de categor�a, conteos inv�lidos, GPS fuera de dominio e identificador de tienda ausente. Las marcas enumeradas en fr�o con cero caras se tratan como informaci�n que requiere interpretar la definici�n del formulario; no se convierten en presencia positiva ni en acusaciones.
+Controles: claves duplicadas, respuestas incompatibles, contradicciones de categoría, conteos inválidos, GPS fuera de dominio e identificador de tienda ausente. Las marcas enumeradas en frío con cero caras se tratan como información que requiere interpretar la definición del formulario; no se convierten en presencia positiva ni en acusaciones.
 
-## Comparaci�n de colectas entre cortes
+## Comparación de colectas entre cortes
 
-`scan_compare.py` recibe uno o varios JSON completos por lado, para admitir archivos separados por mes. Los meses se declaran expl�citamente. Si falta un mes solicitado en cualquiera de los lados, detiene la comparaci�n: no convierte una exportaci�n parcial en supuestos borrados. Un mes presente todav�a no demuestra que est�n todas sus visitas; las ausencias se etiquetan como diferencias de presencia entre archivos, sujetas a confirmar filtros y cobertura.
+`scan_compare.py` recibe uno o varios JSON completos por lado, para admitir archivos separados por mes. Los meses se declaran explícitamente. Si falta un mes solicitado en cualquiera de los lados, detiene la comparación: no convierte una exportación parcial en supuestos borrados. Un mes presente todavía no demuestra que estén todas sus visitas; las ausencias se etiquetan como diferencias de presencia entre archivos, sujetas a confirmar filtros y cobertura.
 
 ```powershell
 python scan_compare.py --previous private/corte-anterior.json --current private/septiembre.json private/octubre.json --months 2026-09 2026-10 --runtime private/comparacion-colectas
 ```
 
-Para una vista mensual, declare solo ese mes; para la conjunta, declare ambos. Empareja por formulario original e ID Kobo, sin unir por tienda ni elegir entre claves o rutas duplicadas. Conserva �ndices del archivo, registro y respuesta, los valores antes/despu�s y la distinci�n entre ausente, nulo, n�mero y texto. Compara tambi�n los metadatos de revisi�n del registro. Un movimiento de mes de la misma identidad se distingue de una alta o ausencia.
+Para una vista mensual, declare solo ese mes; para la conjunta, declare ambos. Empareja por formulario original e ID Kobo, sin unir por tienda ni elegir entre claves o rutas duplicadas. Conserva índices del archivo, registro y respuesta, los valores antes/después y la distinción entre ausente, nulo, número y texto. Compara también los metadatos de revisión del registro. Un movimiento de mes de la misma identidad se distingue de una alta o ausencia.
 
-La bit�cora conserva los bytes de todos los archivos y el c�digo exacto utilizado. Repetir los mismos insumos y meses recupera la aceptaci�n existente. L�mites: 24 archivos, 60 MB por archivo, 200 MB en conjunto y 100.000 se�ales; excederlos produce rechazo sin una aceptaci�n truncada. Las rutas de entrada deben estar fuera del runtime. El m�dulo compara todos los registros, incluso excluidos hist�ricamente, para no ocultar cambios detr�s de una exclusi�n; no modifica la cohorte, los KPI, los originales ni las decisiones humanas. Sus se�ales no acreditan fraude.
+La bitácora conserva los bytes de todos los archivos y el código exacto utilizado. Repetir los mismos insumos y meses recupera la aceptación existente. Límites: 24 archivos, 60 MB por archivo, 200 MB en conjunto y 100.000 señales; excederlos produce rechazo sin una aceptación truncada. Las rutas de entrada deben estar fuera del runtime. El módulo compara todos los registros, incluso excluidos históricamente, para no ocultar cambios detrás de una exclusión; no modifica la cohorte, los KPI, los originales ni las decisiones humanas. Sus señales no acreditan fraude.
 
-`test_scan_compare.py` cubre alcance parcial, identidades ambiguas, separaci�n por formulario, valores tipados, movimiento de mes, referencias de evidencia, custodia, cambios de implementaci�n e idempotencia. Este comparador se ejecuta por comando; su incorporaci�n a un observador y a la interfaz son pasos separados. Los Excel requieren un adaptador validado antes de sustituir el contrato JSON.
+`test_scan_compare.py` cubre alcance parcial, identidades ambiguas, separación por formulario, valores tipados, movimiento de mes, referencias de evidencia, custodia, cambios de implementación e idempotencia. Este comparador se ejecuta por comando; su incorporación a un observador y a la interfaz son pasos separados. Los Excel requieren un adaptador validado antes de sustituir el contrato JSON.
 
-`scan_compare_watch.py` observa exclusivamente las ejecuciones Scan ya aceptadas en una custodia verificada, sin leer la entrada mutable ni descargar datos. La primera aceptaci�n es `baseline_only`: conserva el corte y sus conteos mensuales, sin simular una comparaci�n. Al aceptar Scan un contenido diferente, calcula un paquete con vista conjunta y vistas por mes contra el �ltimo contenido aceptado por este observador. Un cambio de pol�tica o c�digo que mantenga los mismos bytes de origen no se etiqueta como cambio de datos.
+`scan_compare_watch.py` observa exclusivamente las ejecuciones Scan ya aceptadas en una custodia verificada, sin leer la entrada mutable ni descargar datos. La primera aceptación es `baseline_only`: conserva el corte y sus conteos mensuales, sin simular una comparación. Al aceptar Scan un contenido diferente, calcula un paquete con vista conjunta y vistas por mes contra el último contenido aceptado por este observador. Un cambio de política o código que mantenga los mismos bytes de origen no se etiqueta como cambio de datos.
 
 ```powershell
 python scan_compare_watch.py --scan-runtime private/scan-runtime --runtime private/comparison-runtime --months 2026-09 2026-10 --interval 30
 ```
 
-La custodia de comparaci�n debe estar separada. El bloqueo impide observadores duplicados; un runtime queda vinculado al origen y meses iniciales. Verifica fuentes y salida aun sin cambios y recupera su aceptaci�n despu�s de reiniciar. Ante un mes ausente, una fuente da�ada o un fallo, conserva la aceptaci�n anterior e informa degradaci�n. Los candidatos rechazados y el c�digo del observador se conservan por huella. `comparison_custody_verified` acredita custodia local; no implica descarga reciente ni verificaci�n de la plataforma externa. Las se�ales de la vista conjunta y de los meses se solapan y no se suman como errores independientes.
+La custodia de comparación debe estar separada. El bloqueo impide observadores duplicados; un runtime queda vinculado al origen y meses iniciales. Verifica fuentes y salida aun sin cambios y recupera su aceptación después de reiniciar. Ante un mes ausente, una fuente dañada o un fallo, conserva la aceptación anterior e informa degradación. Los candidatos rechazados y el código del observador se conservan por huella. `comparison_custody_verified` acredita custodia local; no implica descarga reciente ni verificación de la plataforma externa. Las señales de la vista conjunta y de los meses se solapan y no se suman como errores independientes.
 
-El trabajo supervisado `kind: scan_comparison` requiere `scan_runtime`, `runtime`, `months` e `interval` (10�3.600 segundos). Se enlaza con exactamente un observador Scan configurado y usa un script fijo. El estado supervisado conserva la distinci�n entre l�nea base, comparaci�n disponible y comparaci�n no actualizada. `test_scan_compare_watch.py` verifica recuperaci�n, alcance incompleto, entradas mutables, cambios sin datos nuevos, corrupci�n, exclusividad y enlace/estado del supervisor. Esta observaci�n local no activa env�os autom�ticos a la web; la consulta desde la interfaz sigue siendo una integraci�n separada.
+El trabajo supervisado `kind: scan_comparison` requiere `scan_runtime`, `runtime`, `months` e `interval` (10–3.600 segundos). Se enlaza con exactamente un observador Scan configurado y usa un script fijo. El estado supervisado conserva la distinción entre línea base, comparación disponible y comparación no actualizada. `test_scan_compare_watch.py` verifica recuperación, alcance incompleto, entradas mutables, cambios sin datos nuevos, corrupción, exclusividad y enlace/estado del supervisor. Esta observación local no activa envíos automáticos a la web; la consulta desde la interfaz sigue siendo una integración separada.
 
-`export_scan_comparison.py` exporta manualmente una aceptaci�n del observador con sus fuentes y c�digo exactos, tras verificar la custodia. No lee la entrada mutable ni env�a datos. El destino debe estar fuera de los runtimes, no se sobrescribe un archivo existente y el paquete web est� limitado a 20 MB.
+`export_scan_comparison.py` exporta manualmente una aceptación del observador con sus fuentes y código exactos, tras verificar la custodia. No lee la entrada mutable ni envía datos. El destino debe estar fuera de los runtimes, no se sobrescribe un archivo existente y el paquete web está limitado a 20 MB.
 
 ```powershell
 python export_scan_comparison.py --scan-runtime private/scan-runtime --runtime private/comparison-runtime --months 2026-09 2026-10 --output private/entregas/comparacion.json
 ```
 
-La carga de ese paquete en una web privada es un paso manual. La interfaz debe identificar el c�lculo como local: conservar bytes y cotejar filas no equivale a recalcular el algoritmo, verificar su bit�cora completa o certificar la completitud de los hallazgos. `test_export_scan_comparison.py` verifica originales antes/despu�s, exportaci�n sin env�o, rechazo ante alteraci�n y ausencia de sobrescrituras.
+La carga de ese paquete en una web privada es un paso manual. La interfaz debe identificar el cálculo como local: conservar bytes y cotejar filas no equivale a recalcular el algoritmo, verificar su bitácora completa o certificar la completitud de los hallazgos. `test_export_scan_comparison.py` verifica originales antes/después, exportación sin envío, rechazo ante alteración y ausencia de sobrescrituras.
 
 ## Facturas y cortes comparables
 
-`invoice_adapter.py` extrae la hoja de �tems del XLSX preservando cabeceras, tipos, vac�os y filas. `invoice_core.py` controla claves, n�meros, fechas, cabeceras, posibles recapturas y cambios entre cortes de igual alcance. No se inventan impuestos ni se supone que un documento est� completo.
+`invoice_adapter.py` extrae la hoja de ítems del XLSX preservando cabeceras, tipos, vacíos y filas. `invoice_core.py` controla claves, números, fechas, cabeceras, posibles recapturas y cambios entre cortes de igual alcance. No se inventan impuestos ni se supone que un documento está completo.
 
-El adaptador rechaza entradas ZIP duplicadas, rutas inseguras, cifrado y compresi�n no admitida; limita el tama�o comprimido, la expansi�n y el n�mero de partes. En el XML consumido rechaza DTD, relaciones externas o duplicadas, filas repetidas o desordenadas, coordenadas incompatibles, celdas duplicadas, �ndices de texto inv�lidos y n�meros no finitos. Estas comprobaciones protegen la extracci�n; no autentican al emisor ni prueban la veracidad de una factura.
+El adaptador rechaza entradas ZIP duplicadas, rutas inseguras, cifrado y compresión no admitida; limita el tamaño comprimido, la expansión y el número de partes. En el XML consumido rechaza DTD, relaciones externas o duplicadas, filas repetidas o desordenadas, coordenadas incompatibles, celdas duplicadas, índices de texto inválidos y números no finitos. Estas comprobaciones protegen la extracción; no autentican al emisor ni prueban la veracidad de una factura.
 
-`invoice_pipeline.py` coteja las celdas del JSON con el XLSX cuando se suministra, conserva originales y referencias y enlaza la ejecuci�n a la bit�cora. `invoice_watch.py` selecciona el corte anterior aceptado del mismo universo. Un cambio de pol�tica conserva el par de comparaci�n; un universo nuevo inicia otra cadena. Las claves ambiguas se excluyen del cruce.
+`invoice_pipeline.py` coteja las celdas del JSON con el XLSX cuando se suministra, conserva originales y referencias y enlaza la ejecución a la bitácora. `invoice_watch.py` selecciona el corte anterior aceptado del mismo universo. Un cambio de política conserva el par de comparación; un universo nuevo inicia otra cadena. Las claves ambiguas se excluyen del cruce.
 
-La pol�tica `mindtec-invoice-policy/1` necesita `version`. `line_arithmetic` e `invoice_sum` pueden ser `null`. Una f�rmula habilitada requiere evidencia, t�rminos y tolerancia expl�citos; la suma documental exige prueba de completitud por documento. Los valores ausentes no se convierten en cero. Una medida no positiva puede corresponder a una bonificaci�n o devoluci�n.
+La política `mindtec-invoice-policy/1` necesita `version`. `line_arithmetic` e `invoice_sum` pueden ser `null`. Una fórmula habilitada requiere evidencia, términos y tolerancia explícitos; la suma documental exige prueba de completitud por documento. Los valores ausentes no se convierten en cero. Una medida no positiva puede corresponder a una bonificación o devolución.
 
 ## Linaje hacia los indicadores
 
-`kpi_lineage.py` enlaza dependencias declaradas de l�neas de factura y rutas/valores originales de componentes de Perfect Store con hallazgos de sus cortes verificados. Un v�nculo identifica un insumo compartido, no un impacto num�rico demostrado. La ausencia de v�nculos tampoco acredita validaci�n. No une cortes distintos solo porque coincidan IDs ni modifica los valores KPI.
+`kpi_lineage.py` enlaza dependencias declaradas de líneas de factura y rutas/valores originales de componentes de Perfect Store con hallazgos de sus cortes verificados. Un vínculo identifica un insumo compartido, no un impacto numérico demostrado. La ausencia de vínculos tampoco acredita validación. No une cortes distintos solo porque coincidan IDs ni modifica los valores KPI.
 
-`lineage_bundle.py` produce una proyecci�n compacta de los campos consumidos por el enlace. Omite descripciones y campos ajenos al algoritmo; no reemplaza los originales completos. `verify_lineage_web.py` contrasta la proyecci�n y el evaluador JavaScript con el resultado de archivos completos. La interfaz web y su despliegue privado se mantienen separados de este paquete p�blico.
+`lineage_bundle.py` produce una proyección compacta de los campos consumidos por el enlace. Omite descripciones y campos ajenos al algoritmo; no reemplaza los originales completos. `verify_lineage_web.py` contrasta la proyección y el evaluador JavaScript con el resultado de archivos completos. La interfaz web y su despliegue privado se mantienen separados de este paquete público.
 
-## Supervisi�n en Windows
+## Supervisión en Windows
 
-`supervisor.py` permite trabajos `scan`, `invoice`, `lineage`, `feed` y `outbox`, con scripts fijos y rutas absolutas. Rechaza runtimes compartidos, configuraciones de alimentaci�n no enlazadas con el mismo observador Scan y bandejas no enlazadas con sus tres observadores fuente. No ejecuta comandos de shell proporcionados por el JSON.
+`supervisor.py` permite trabajos `scan`, `invoice`, `lineage`, `feed` y `outbox`, con scripts fijos y rutas absolutas. Rechaza runtimes compartidos, configuraciones de alimentación no enlazadas con el mismo observador Scan y bandejas no enlazadas con sus tres observadores fuente. No ejecuta comandos de shell proporcionados por el JSON.
 
-El supervisor comprueba sus propios handles de proceso. Solo una salida terminal comprobada activa su reinicio con espera creciente. Un estado atrasado o un PID ajeno indican degradaci�n y no autorizan terminar un proceso vivo. Los bloqueos impiden duplicados. Configuraci�n y c�digo operativos quedan archivados por huella.
+El supervisor comprueba sus propios handles de proceso. Solo una salida terminal comprobada activa su reinicio con espera creciente. Un estado atrasado o un PID ajeno indican degradación y no autorizan terminar un proceso vivo. Los bloqueos impiden duplicados. Configuración y código operativos quedan archivados por huella.
 
-`windows_job.py` usa un Job Object no heredable para terminar el �rbol propio al morir el supervisor. `install-supervisor-task.ps1` permite instalar una tarea oculta del usuario actual, con privilegios limitados, inicio de sesi�n y comprobaci�n peri�dica de instancia �nica. No almacena contrase�a y no equivale a un servicio disponible antes del inicio de sesi�n. Revise los par�metros antes de instalarla.
+`windows_job.py` usa un Job Object no heredable para terminar el árbol propio al morir el supervisor. `install-supervisor-task.ps1` permite instalar una tarea oculta del usuario actual, con privilegios limitados, inicio de sesión y comprobación periódica de instancia única. No almacena contraseña y no equivale a un servicio disponible antes del inicio de sesión. Revise los parámetros antes de instalarla.
 
-La se�al `stop.request` en el runtime del supervisor impide levantar observadores, incluso durante los disparos peri�dicos. Para detener permanentemente el arranque, deshabilite la tarea. Los permisos del sistema de archivos siguen siendo necesarios: un administrador con control completo podr�a reescribir una cadena y sus objetos. Conserve una huella de cierre fuera de ese almacenamiento para verificaci�n independiente.
+La señal `stop.request` en el runtime del supervisor impide levantar observadores, incluso durante los disparos periódicos. Para detener permanentemente el arranque, deshabilite la tarea. Los permisos del sistema de archivos siguen siendo necesarios: un administrador con control completo podría reescribir una cadena y sus objetos. Conserve una huella de cierre fuera de ese almacenamiento para verificación independiente.
 
-## Alimentaci�n HTTPS pendiente de acceso autorizado
+## Alimentación HTTPS pendiente de acceso autorizado
 
-`scan_feed.py` est� preparado para GET HTTPS con l�mites de tama�o/tiempo, rechazo de redirecciones, contrato estricto y conservaci�n del �ltimo corte v�lido. El ejemplo permanece deshabilitado. El modo `bearer_env` solo es aplicable si el proveedor confirma que es su esquema oficial. No se usan cookies personales ni se guardan credenciales en JSON.
+`scan_feed.py` está preparado para GET HTTPS con límites de tamaño/tiempo, rechazo de redirecciones, contrato estricto y conservación del último corte válido. El ejemplo permanece deshabilitado. El modo `bearer_env` solo es aplicable si el proveedor confirma que es su esquema oficial. No se usan cookies personales ni se guardan credenciales en JSON.
 
-El supervisor rechaza registrar un feed deshabilitado; su runtime, intervalo, entrada y pol�tica deben coincidir con la configuraci�n del observador Scan. La validaci�n no lee credenciales ni hace peticiones. No se activa una conexi�n real ni se crea una cuenta al descargar este c�digo. Consulte [el acceso pendiente](ACCESO_PENDIENTE_SCAN.md) para coordinarlo con el custodio t�cnico.
+El supervisor rechaza registrar un feed deshabilitado; su runtime, intervalo, entrada y política deben coincidir con la configuración del observador Scan. La validación no lee credenciales ni hace peticiones. No se activa una conexión real ni se crea una cuenta al descargar este código. Consulte [el acceso pendiente](ACCESO_PENDIENTE_SCAN.md) para coordinarlo con el custodio técnico.
 
-Este paquete del motor no incluye el servidor web ni su despliegue, que se mantienen separados. La sincronizaci�n autenticada autom�tica de datos con esa web sigue pendiente. La integridad y la concordancia num�rica no certifican veracidad documental, representatividad ni probabilidad de fraude.
+Este paquete del motor no incluye el servidor web ni su despliegue, que se mantienen separados. La sincronización autenticada automática de datos con esa web sigue pendiente. La integridad y la concordancia numérica no certifican veracidad documental, representatividad ni probabilidad de fraude.
 
-## Lector ZIP port�til en preparaci�n
+## Lector ZIP portátil en preparación
 
-`xlsx-zip.mjs` recupera partes internas del XLSX mediante APIs web est�ndar, sin acceso a archivos, red ni dependencias Node en el m�dulo. Verifica cabeceras locales y centrales, nombres, descriptores, tama�os, l�mites de expansi�n y CRC. Admite ZIP de un solo disco con partes almacenadas o Deflate; rechaza ZIP64, cifrado, enlaces simb�licos, rutas inseguras y codificaciones heredadas no ASCII.
+`xlsx-zip.mjs` recupera partes internas del XLSX mediante APIs web estándar, sin acceso a archivos, red ni dependencias Node en el módulo. Verifica cabeceras locales y centrales, nombres, descriptores, tamaños, límites de expansión y CRC. Admite ZIP de un solo disco con partes almacenadas o Deflate; rechaza ZIP64, cifrado, enlaces simbólicos, rutas inseguras y codificaciones heredadas no ASCII.
 
-`node --test test-xlsx-zip.mjs` ejecuta sus pruebas sint�ticas. `python verify_xlsx_zip_web.py archivo.xlsx --output private/zip-parity.json` compara el SHA-256 de cada parte descomprimida contra el lector independiente de Python. Ese contraste demuestra igualdad de bytes, no validaci�n de los indicadores ni autenticidad del documento.
+`node --test test-xlsx-zip.mjs` ejecuta sus pruebas sintéticas. `python verify_xlsx_zip_web.py archivo.xlsx --output private/zip-parity.json` compara el SHA-256 de cada parte descomprimida contra el lector independiente de Python. Ese contraste demuestra igualdad de bytes, no validación de los indicadores ni autenticidad del documento.
 
-Referencias del lector: [especificaci�n ZIP de PKWARE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) y [APIs web de Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/web-standards/).
+Referencias del lector: [especificación ZIP de PKWARE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) y [APIs web de Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/web-standards/).
 
-`xlsx-web-core.mjs` interpreta la hoja de �tems de facturas y coteja cabeceras, valores tipados, vac�os, filas originales, nombre de hoja, sistema de fechas y cantidad de f�rmulas con el JSON. Conserva el valor almacenado de una f�rmula: no la ejecuta ni demuestra que est� actualizado. Los enteros fuera del rango exacto de JavaScript se rechazan. El XML se procesa por bloques con l�mites de profundidad, elementos y texto, rechazando DTD, entidades no predefinidas, atributos duplicados y estructuras ambiguas.
+`xlsx-web-core.mjs` interpreta la hoja de ítems de facturas y coteja cabeceras, valores tipados, vacíos, filas originales, nombre de hoja, sistema de fechas y cantidad de fórmulas con el JSON. Conserva el valor almacenado de una fórmula: no la ejecuta ni demuestra que esté actualizado. Los enteros fuera del rango exacto de JavaScript se rechazan. El XML se procesa por bloques con límites de profundidad, elementos y texto, rechazando DTD, entidades no predefinidas, atributos duplicados y estructuras ambiguas.
 
-El analizador SAX se conserva con versi�n, licencia y hashes en [vendor](vendor/README.md); no requiere instalar paquetes en ejecuci�n. `python -m unittest -v test_xlsx_cells_web` contrasta celdas con el adaptador Python y comprueba rechazos. `node verify-xlsx-cells.mjs original.xlsx corte.json` verifica la huella del XLSX y el cotejo de celdas contra un corte conservado. La integraci�n en el servidor se mantiene en el repositorio privado del Site: conserva el original, resultado y c�digo, y a�ade una aceptaci�n posterior sin reescribir hallazgos hist�ricos. Las pruebas del m�dulo no sustituyen la aceptaci�n y verificaci�n de cada archivo en ese servidor.
+El analizador SAX se conserva con versión, licencia y hashes en [vendor](vendor/README.md); no requiere instalar paquetes en ejecución. `python -m unittest -v test_xlsx_cells_web` contrasta celdas con el adaptador Python y comprueba rechazos. `node verify-xlsx-cells.mjs original.xlsx corte.json` verifica la huella del XLSX y el cotejo de celdas contra un corte conservado. La integración en el servidor se mantiene en el repositorio privado del Site: conserva el original, resultado y código, y añade una aceptación posterior sin reescribir hallazgos históricos. Las pruebas del módulo no sustituyen la aceptación y verificación de cada archivo en ese servidor.
 
-## Bandeja local para sincronizaci�n
+## Bandeja local para sincronización
 
-`sync_outbox.py` prepara un paquete inmutable de las ejecuciones aceptadas de Scan, facturas y linaje. Exige que los IDs y huellas fuente del linaje correspondan a los cortes seleccionados; si el linaje todav�a no acept� un corte nuevo, conserva el paquete anterior. Requiere los originales de factura ya cotejados. Copia fuentes y referencias desde la custodia verificada, no desde archivos de entrada cambiantes, e incluye pol�ticas, reglas, hallazgos, c�digo y prefijos de bit�cora. La proyecci�n para la web se genera desde los cuatro padres conservados por ese linaje, con sus hashes.
+`sync_outbox.py` prepara un paquete inmutable de las ejecuciones aceptadas de Scan, facturas y linaje. Exige que los IDs y huellas fuente del linaje correspondan a los cortes seleccionados; si el linaje todavía no aceptó un corte nuevo, conserva el paquete anterior. Requiere los originales de factura ya cotejados. Copia fuentes y referencias desde la custodia verificada, no desde archivos de entrada cambiantes, e incluye políticas, reglas, hallazgos, código y prefijos de bitácora. La proyección para la web se genera desde los cuatro padres conservados por ese linaje, con sus hashes.
 
-El runtime de salida debe estar separado de los tres runtimes fuente. El paquete queda vinculado a un origen HTTPS y al ID expl�cito del Site. Repetir la preparaci�n con las mismas fuentes, prefijos, destino y c�digo recupera la misma aceptaci�n. Se limita a 100 MB por objeto y 400 MB de evidencia �nica por paquete. Los prefijos permiten comprobar cadenas de eventos; no incluyen todos los objetos hist�ricos ajenos a las referencias seleccionadas.
+El runtime de salida debe estar separado de los tres runtimes fuente. El paquete queda vinculado a un origen HTTPS y al ID explícito del Site. Repetir la preparación con las mismas fuentes, prefijos, destino y código recupera la misma aceptación. Se limita a 100 MB por objeto y 400 MB de evidencia única por paquete. Los prefijos permiten comprobar cadenas de eventos; no incluyen todos los objetos históricos ajenos a las referencias seleccionadas.
 
 ```powershell
 python sync_outbox.py --invoice-runtime private/invoices-runtime --scan-runtime private/scan-runtime --lineage-runtime private/lineage-runtime --runtime private/sync-runtime --origin https://audit.example.org --project-id appgprj_REPLACE
 ```
 
-La plantilla de comando requiere sustituir rutas y destino. Preparar no env�a datos ni crea una credencial o un recibo remoto: el estado es `prepared_not_sent`. La escritura desatendida y su autorizaci�n deben verificarse por separado. Las pruebas de `test_sync_outbox.py` incluyen idempotencia, cortes incompatibles, corrupci�n, ausencia de originales y aislamiento de la custodia.
+La plantilla de comando requiere sustituir rutas y destino. Preparar no envía datos ni crea una credencial o un recibo remoto: el estado es `prepared_not_sent`. La escritura desatendida y su autorización deben verificarse por separado. Las pruebas de `test_sync_outbox.py` incluyen idempotencia, cortes incompatibles, corrupción, ausencia de originales y aislamiento de la custodia.
 
-`sync_outbox_watch.py` prepara la bandeja continuamente, con intervalo de 30 a 3.600 segundos. Verifica fuentes y salida aun con entradas sin cambios; evita reconstruir y repetir aceptaciones si el token no cambi�. Recupera el paquete durable tras reiniciar y conserva la �ltima aceptaci�n al esperar el linaje o encontrar un fallo. El recibo local conserva tambi�n el c�digo del observador; no es un recibo de entrega remota.
+`sync_outbox_watch.py` prepara la bandeja continuamente, con intervalo de 30 a 3.600 segundos. Verifica fuentes y salida aun con entradas sin cambios; evita reconstruir y repetir aceptaciones si el token no cambió. Recupera el paquete durable tras reiniciar y conserva la última aceptación al esperar el linaje o encontrar un fallo. El recibo local conserva también el código del observador; no es un recibo de entrega remota.
 
-El trabajo supervisado `kind: outbox` exige `invoice_runtime`, `scan_runtime`, `lineage_runtime`, `runtime`, `origin`, `project_id` e `interval`. Debe enlazarse con exactamente un observador de cada familia y con los mismos runtimes fuente del linaje. Su `health.json` distingue `status: healthy` (preparaci�n local correcta), `state: prepared_not_sent` y `delivery: not_configured`. La p�rdida o alteraci�n de la custodia produce degradaci�n, no una confirmaci�n de sincronizaci�n. `test_sync_outbox_watch.py` comprueba recuperaci�n, bloqueos, espera coherente y evidencia da�ada.
+El trabajo supervisado `kind: outbox` exige `invoice_runtime`, `scan_runtime`, `lineage_runtime`, `runtime`, `origin`, `project_id` e `interval`. Debe enlazarse con exactamente un observador de cada familia y con los mismos runtimes fuente del linaje. Su `health.json` distingue `status: healthy` (preparación local correcta), `state: prepared_not_sent` y `delivery: not_configured`. La pérdida o alteración de la custodia produce degradación, no una confirmación de sincronización. `test_sync_outbox_watch.py` comprueba recuperación, bloqueos, espera coherente y evidencia dañada.
 
-## Cliente de entrega con lectura de confirmaci�n
+## Cliente de entrega con lectura de confirmación
 
-`sync_client.py` selecciona un paquete verificado de la bandeja cuyo destino coincida con la configuraci�n. Antes de enviar lee y coteja todos los artefactos transferibles. Env�a pol�ticas y fuentes a los evaluadores de Scan/facturas, incorpora los originales XLSX y calcula el linaje en el servidor; utiliza los IDs devueltos, sin suponer que coincidan con los IDs locales.
+`sync_client.py` selecciona un paquete verificado de la bandeja cuyo destino coincida con la configuración. Antes de enviar lee y coteja todos los artefactos transferibles. Envía políticas y fuentes a los evaluadores de Scan/facturas, incorpora los originales XLSX y calcula el linaje en el servidor; utiliza los IDs devueltos, sin suponer que coincidan con los IDs locales.
 
-El recibo remoto debe vincular manifiesto, pol�ticas, fuentes, originales y ejecuciones del linaje. El cliente exige la lista exacta de roles comprobados y conserva expl�citamente los no comprobados. No acepta afirmaciones de cadena local, padres completos o paridad num�rica verificados remotamente. Un POST exitoso no confirma la entrega: debe recuperar por GET el resultado, manifiesto, solicitud y c�digo y comprobar sus huellas y bytes. Solo entonces conserva una aceptaci�n local `delivered_verified` con su evidencia. Al repetir, vuelve a comprobar el recibo remoto y recupera la misma aceptaci�n local.
+El recibo remoto debe vincular manifiesto, políticas, fuentes, originales y ejecuciones del linaje. El cliente exige la lista exacta de roles comprobados y conserva explícitamente los no comprobados. No acepta afirmaciones de cadena local, padres completos o paridad numérica verificados remotamente. Un POST exitoso no confirma la entrega: debe recuperar por GET el resultado, manifiesto, solicitud y código y comprobar sus huellas y bytes. Solo entonces conserva una aceptación local `delivered_verified` con su evidencia. Al repetir, vuelve a comprobar el recibo remoto y recupera la misma aceptación local.
 
 Copie `sync-client.example.json` en una carpeta privada y sustituya rutas y Site. La plantilla permanece deshabilitada. Use un runtime distinto de la bandeja. La credencial de servicio de Sites se obtiene por un mecanismo autorizado y se inyecta en la variable dedicada indicada por `token_env`; no se guarda en el JSON. `--credential-stdin` admite un pipe oculto de un lanzador autorizado, nunca entrada visible de terminal. Las peticiones HTTPS llevan la credencial solo al origen enlazado; se rechazan redirecciones, respuestas de otro origen, cuerpos excesivos, JSON ambiguo y lecturas con huellas incompatibles.
 
@@ -134,43 +134,43 @@ Copie `sync-client.example.json` en una carpeta privada y sustituya rutas y Site
 python sync_client.py --config private/sync-client.json
 ```
 
-Este comando es de una ejecuci�n, no un servicio de env�o continuo. La obtenci�n de credenciales sin la sesi�n de autor�a y la programaci�n del emisor requieren configuraci�n separada. Los errores conservan el motivo/estado/etapa y no los cuerpos de error ni las credenciales. Una entrega previa permanece conservada si su comprobaci�n posterior falla. El estado de la bandeja original no se reescribe: sus paquetes siguen siendo evidencia preparada y sus entregas se consultan en el runtime del cliente.
+Este comando es de una ejecución, no un servicio de envío continuo. La obtención de credenciales sin la sesión de autoría y la programación del emisor requieren configuración separada. Los errores conservan el motivo/estado/etapa y no los cuerpos de error ni las credenciales. Una entrega previa permanece conservada si su comprobación posterior falla. El estado de la bandeja original no se reescribe: sus paquetes siguen siendo evidencia preparada y sus entregas se consultan en el runtime del cliente.
 
-`test_sync_client.py` comprueba ausencia de confirmaci�n ante fallos parciales, recibos incorrectos, custodia alterada, destinos incompatibles y respuestas incompletas, adem�s de idempotencia y exclusividad de la credencial por origen.
+`test_sync_client.py` comprueba ausencia de confirmación ante fallos parciales, recibos incorrectos, custodia alterada, destinos incompatibles y respuestas incompletas, además de idempotencia y exclusividad de la credencial por origen.
 
 ## Emisor continuo pendiente de acceso administrado
 
-`sync_delivery_watch.py` entrega paquetes nuevos y vuelve a consultar peri�dicamente el recibo del paquete sin cambios. Reutiliza la configuraci�n del cliente y obtiene la credencial �nicamente de su variable de entorno dedicada. No obtiene credenciales por s� mismo ni descarga la fuente Scan. El suministro y la renovaci�n del acceso deben quedar resueltos antes de instalar una tarea.
+`sync_delivery_watch.py` entrega paquetes nuevos y vuelve a consultar periódicamente el recibo del paquete sin cambios. Reutiliza la configuración del cliente y obtiene la credencial únicamente de su variable de entorno dedicada. No obtiene credenciales por sí mismo ni descarga la fuente Scan. El suministro y la renovación del acceso deben quedar resueltos antes de instalar una tarea.
 
 ```powershell
 python sync_delivery_watch.py --config private/sync-client.json --interval 300 --recheck-interval 3600
 ```
 
-El estado distingue `remote_verified_this_poll` de `local_delivery_custody_verified`. Una comprobaci�n local intermedia conserva la fecha de la �ltima lectura remota; no afirma haber comprobado nuevamente el servidor. Tras reiniciar exige una lectura remota antes de confirmar. Una credencial ausente o un fallo conserva la �ltima aceptaci�n e informa degradaci�n. Los reintentos respetan `Retry-After` y usan espera creciente sin registrar cuerpos ni claves. Un bloqueo exclusivo impide observadores duplicados.
+El estado distingue `remote_verified_this_poll` de `local_delivery_custody_verified`. Una comprobación local intermedia conserva la fecha de la última lectura remota; no afirma haber comprobado nuevamente el servidor. Tras reiniciar exige una lectura remota antes de confirmar. Una credencial ausente o un fallo conserva la última aceptación e informa degradación. Los reintentos respetan `Retry-After` y usan espera creciente sin registrar cuerpos ni claves. Un bloqueo exclusivo impide observadores duplicados.
 
-El supervisor admite `kind: publisher`, con `config`, `runtime`, `interval` y `recheck_interval`. Exige un cliente habilitado, runtime separado y exactamente una bandeja configurada con el mismo runtime fuente, origen y proyecto. La validaci�n estructural no consulta credenciales ni acredita que exista acceso. `test_sync_delivery_watch.py` comprueba entregas nuevas, lectura peri�dica, recuperaci�n, falta de credencial, espera, corrupci�n y enlace del supervisor.
+El supervisor admite `kind: publisher`, con `config`, `runtime`, `interval` y `recheck_interval`. Exige un cliente habilitado, runtime separado y exactamente una bandeja configurada con el mismo runtime fuente, origen y proyecto. La validación estructural no consulta credenciales ni acredita que exista acceso. `test_sync_delivery_watch.py` comprueba entregas nuevas, lectura periódica, recuperación, falta de credencial, espera, corrupción y enlace del supervisor.
 
-Esta capacidad est� preparada para despliegue. No se activa autom�ticamente al incorporar el c�digo, y las pruebas sint�ticas no demuestran acceso real a Scan ni disponibilidad de una credencial de servicio desatendida.
+Esta capacidad está preparada para despliegue. No se activa automáticamente al incorporar el código, y las pruebas sintéticas no demuestran acceso real a Scan ni disponibilidad de una credencial de servicio desatendida.
 
 ## Exportaciones normalizadas de colecta
 
-`collection_adapter.py` lee el XLSX de resultados con sus cinco hojas de colecta y conserva coordenadas y tipos originales. `collection_audit.py` audita relaciones, claves ambiguas, conteos, precios y campos de cat�logo. Separa meses y aplica exclusiones mediante una correspondencia expl�cita entre ID interno de Scan e ID Kobo. No confunde un vac�o con cero, ni la ausencia en una exportaci�n parcial con una eliminaci�n. Las participaciones calculables se limitan a caras registradas del corte; no certifican los KPI del panel completo.
+`collection_adapter.py` lee el XLSX de resultados con sus cinco hojas de colecta y conserva coordenadas y tipos originales. `collection_audit.py` audita relaciones, claves ambiguas, conteos, precios y campos de catálogo. Separa meses y aplica exclusiones mediante una correspondencia explícita entre ID interno de Scan e ID Kobo. No confunde un vacío con cero, ni la ausencia en una exportación parcial con una eliminación. Las participaciones calculables se limitan a caras registradas del corte; no certifican los KPI del panel completo.
 
-`collection_watch.py` observa �nicamente el archivo seleccionado. Conserva originales, pol�tica, correspondencia de IDs, resultado y c�digo en una custodia propia. Recupera la �ltima aceptaci�n tras reiniciar; las entradas incompletas o inv�lidas quedan rechazadas con evidencia sin sustituirla. Los cambios de pol�tica o c�digo se identifican como rec�lculos, no como cambios de datos. No realiza solicitudes de red ni publicaciones.
+`collection_watch.py` observa únicamente el archivo seleccionado. Conserva originales, política, correspondencia de IDs, resultado y código en una custodia propia. Recupera la última aceptación tras reiniciar; las entradas incompletas o inválidas quedan rechazadas con evidencia sin sustituirla. Los cambios de política o código se identifican como recálculos, no como cambios de datos. No realiza solicitudes de red ni publicaciones.
 
 ```powershell
 python collection_watch.py --source private/collection/incoming/current.xlsx --policy private/policy.json --crosswalk private/collection/crosswalk.json --runtime private/collection/runtime --initial-reference private/collection/reference.xlsx --interval 30
 ```
 
-La referencia inicial es opcional y solo se lee para la primera aceptaci�n. Los cortes siguientes usan originales conservados; un rec�lculo sin cambios de fuente mantiene la referencia de comparaci�n. La correspondencia debe contener `rows` con pares �nicos `internal_id` / `kobo_id`. Las visitas sin correspondencia se conservan, generan una alerta y no entran en c�lculos sujetos a exclusiones hist�ricas. Una f�rmula con valor en cach� no se acepta como observaci�n original.
+La referencia inicial es opcional y solo se lee para la primera aceptación. Los cortes siguientes usan originales conservados; un recálculo sin cambios de fuente mantiene la referencia de comparación. La correspondencia debe contener `rows` con pares únicos `internal_id` / `kobo_id`. Las visitas sin correspondencia se conservan, generan una alerta y no entran en cálculos sujetos a exclusiones históricas. Una fórmula con valor en caché no se acepta como observación original.
 
-El supervisor admite `kind: collection`, con `source`, `policy`, `crosswalk`, `runtime`, `interval` (10 a 3.600 segundos) e `initial_reference` opcional; todas las rutas deben ser absolutas y los archivos de entrada deben quedar fuera de la custodia. Su estado distingue `custody_verified` de `network_delivery: false`. Para incorporar una nueva exportaci�n, conserve el original y sustituya at�micamente solo la copia designada; no escriba dentro de `objects` ni edite la bit�cora. Este observador no inspecciona Descargas ni sustituye las fuentes de facturas o respuestas crudas de Scan.
+El supervisor admite `kind: collection`, con `source`, `policy`, `crosswalk`, `runtime`, `interval` (10 a 3.600 segundos) e `initial_reference` opcional; todas las rutas deben ser absolutas y los archivos de entrada deben quedar fuera de la custodia. Su estado distingue `custody_verified` de `network_delivery: false`. Para incorporar una nueva exportación, conserve el original y sustituya atómicamente solo la copia designada; no escriba dentro de `objects` ni edite la bitácora. Este observador no inspecciona Descargas ni sustituye las fuentes de facturas o respuestas crudas de Scan.
 
-Las pruebas `test_collection_audit.py`, `test_collection_watch.py` y `test_collection_supervisor.py` cubren denominadores mensuales, trazabilidad por celda, duplicados, cambios de pol�tica, recuperaci�n, rechazo de archivos incompletos, corrupci�n, exclusi�n mutua y configuraci�n del supervisor.
+Las pruebas `test_collection_audit.py`, `test_collection_watch.py` y `test_collection_supervisor.py` cubren denominadores mensuales, trazabilidad por celda, duplicados, cambios de política, recuperación, rechazo de archivos incompletos, corrupción, exclusión mutua y configuración del supervisor.
 
-## Revisi�n local con decisiones vinculadas a evidencia
+## Revisión local con decisiones vinculadas a evidencia
 
-`review_queue.py export` crea una cola JSON fuera de la custodia con hallazgos, revisiones previas, huellas de fuentes y un contrato de decisi�n para completar. Es una instant�nea de lectura; no modifica la bit�cora ni supone que una persona haya revisado los datos.
+`review_queue.py export` crea una cola JSON fuera de la custodia con hallazgos, revisiones previas, huellas de fuentes y un contrato de decisión para completar. Es una instantánea de lectura; no modifica la bitácora ni supone que una persona haya revisado los datos.
 
 ```powershell
 python review_queue.py export --runtime private/collection/runtime --output private/revision/cola.json
@@ -179,19 +179,19 @@ python report.py --runtime private/collection/runtime --output private/revision/
 
 En el informe de colecta, cada celda citada se coteja con el XLSX conservado: hoja, coordenada, columna, valor e ID interno. No se consulta la copia mutable. Este cotejo prueba correspondencia con el archivo, no veracidad independiente.
 
-Una persona puede copiar `decision_contract` a otro JSON y completar huella del hallazgo, identidad, estado, explicaci�n y referencia de evidencia. Para registrarlo expl�citamente:
+Una persona puede copiar `decision_contract` a otro JSON y completar huella del hallazgo, identidad, estado, explicación y referencia de evidencia. Para registrarlo explícitamente:
 
 ```powershell
 python review_queue.py apply --runtime private/collection/runtime --decision private/revision/decision.json
 ```
 
-La decisi�n requiere la ejecuci�n, el insumo y la cabecera exacta de la bit�cora exportada. Si otra operaci�n avanz� la bit�cora, debe exportarse una cola nueva y reconsiderarse la decisi�n. Se conserva el archivo de decisi�n original y se a�ade un evento; no se reescribe una revisi�n anterior ni se traslada autom�ticamente a otros cortes. Los estados admitidos son `en_revision`, `dato_confirmado`, `correccion_solicitada`, `diferencia_explicada` y `sin_evidencia_suficiente`. Una declaraci�n de dato confirmado o diferencia explicada se identifica como decisi�n registrada; no acredita por s� sola una validaci�n independiente.
+La decisión requiere la ejecución, el insumo y la cabecera exacta de la bitácora exportada. Si otra operación avanzó la bitácora, debe exportarse una cola nueva y reconsiderarse la decisión. Se conserva el archivo de decisión original y se añade un evento; no se reescribe una revisión anterior ni se traslada automáticamente a otros cortes. Los estados admitidos son `en_revision`, `dato_confirmado`, `correccion_solicitada`, `diferencia_explicada` y `sin_evidencia_suficiente`. Una declaración de dato confirmado o diferencia explicada se identifica como decisión registrada; no acredita por sí sola una validación independiente.
 
-La identidad en este flujo local es **declarada**, no autenticada por la plataforma. No sustituye sus permisos ni autoriza sanciones. Las pruebas `test_review_queue.py` incluyen rechazo de decisiones repetidas, desactualizadas, con claves JSON duplicadas, otras fuentes, otras huellas y plantillas sin completar. No se registran revisiones reales a partir de las pruebas sint�ticas.
+La identidad en este flujo local es **declarada**, no autenticada por la plataforma. No sustituye sus permisos ni autoriza sanciones. Las pruebas `test_review_queue.py` incluyen rechazo de decisiones repetidas, desactualizadas, con claves JSON duplicadas, otras fuentes, otras huellas y plantillas sin completar. No se registran revisiones reales a partir de las pruebas sintéticas.
 
-## Cobertura entre exportaciones y m�tricas sobre pares
+## Cobertura entre exportaciones y métricas sobre pares
 
-Un MAE/RMSE nulo sobre las celdas emparejadas no demuestra igualdad de la cobertura. `collection_impact.py` toma los originales de una ejecuci�n de colecta aceptada, aplica la misma pol�tica a ambos lados y describe filas presentes en una sola exportaci�n y diferencias de subtotales conocidos por mes/categor�a. No consulta los archivos mutables. Los valores vac�os y las claves ambiguas se cuentan aparte: el subtotal registrado no es un total completo ni un KPI poblacional. Una ausencia no demuestra baja de producto ni fraude.
+Un MAE/RMSE nulo sobre las celdas emparejadas no demuestra igualdad de la cobertura. `collection_impact.py` toma los originales de una ejecución de colecta aceptada, aplica la misma política a ambos lados y describe filas presentes en una sola exportación y diferencias de subtotales conocidos por mes/categoría. No consulta los archivos mutables. Los valores vacíos y las claves ambiguas se cuentan aparte: el subtotal registrado no es un total completo ni un KPI poblacional. Una ausencia no demuestra baja de producto ni fraude.
 
 ```powershell
 python collection_impact.py --source-runtime private/collection/runtime --runtime private/collection-impact/runtime --output private/revision/impacto.json
@@ -199,26 +199,26 @@ python collection_impact_report.py --runtime private/collection-impact/runtime -
 python review_queue.py export --runtime private/collection-impact/runtime --output private/revision/cola-cobertura.json
 ```
 
-El anexo mantiene originales, c�digo y se�al por fila en una custodia separada. Su informe coteja las celdas citadas con el XLSX de su lado de origen. Los hallazgos de cobertura y los de conteos del corte pueden solaparse; no deben sumarse como errores independientes ni como probabilidad de fraude. Este an�lisis se ejecuta expresamente por comando: su existencia no acredita que el observador lo regenere ni que se haya publicado en la web.
+El anexo mantiene originales, código y señal por fila en una custodia separada. Su informe coteja las celdas citadas con el XLSX de su lado de origen. Los hallazgos de cobertura y los de conteos del corte pueden solaparse; no deben sumarse como errores independientes ni como probabilidad de fraude. Este análisis se ejecuta expresamente por comando: su existencia no acredita que el observador lo regenere ni que se haya publicado en la web.
 
-## Respuestas anchas y reconstrucci�n operativa de Perfect Store
+## Respuestas anchas y reconstrucción operativa de Perfect Store
 
-`flat_answers.py` lee el Excel detallado de Env�os mediante correspondencias exactas entre pregunta, �ndices de repetici�n y formulario. Las rutas proceden de un esquema hist�rico expl�cito; sus valores hist�ricos no se reutilizan. Las etiquetas ambiguas, celdas en conflicto, rutas sin correspondencia y vac�os quedan identificados. Esta proyecci�n no se presenta como la exportaci�n JSON oficial ni se incorpora autom�ticamente al observador de respuestas crudas.
+`flat_answers.py` lee el Excel detallado de Envíos mediante correspondencias exactas entre pregunta, índices de repetición y formulario. Las rutas proceden de un esquema histórico explícito; sus valores históricos no se reutilizan. Las etiquetas ambiguas, celdas en conflicto, rutas sin correspondencia y vacíos quedan identificados. Esta proyección no se presenta como la exportación JSON oficial ni se incorpora automáticamente al observador de respuestas crudas.
 
-`perfect_store.py` calcula los cinco componentes de la reconstrucci�n documentada: Presencia, SKU n�cleo, Fr�o, POP y Sin quiebre. Requiere configuraci�n expl�cita de pesos, propietario, canasta de referencias, equivalencias y regla de acceso al fr�o. El componente SKU usa el proxy hist�rico de la canasta de precios: no certifica una matriz n�cleo oficial. Se distingue la enumeraci�n de todos los enfriadores del formulario anterior de la enumeraci�n BSA del posterior; no se rellena un conteo BSA vac�o con el total.
+`perfect_store.py` calcula los cinco componentes de la reconstrucción documentada: Presencia, SKU núcleo, Frío, POP y Sin quiebre. Requiere configuración explícita de pesos, propietario, canasta de referencias, equivalencias y regla de acceso al frío. El componente SKU usa el proxy histórico de la canasta de precios: no certifica una matriz núcleo oficial. Se distingue la enumeración de todos los enfriadores del formulario anterior de la enumeración BSA del posterior; no se rellena un conteo BSA vacío con el total.
 
-Las repeticiones incompletas y listas sin resolver quedan pendientes; no se convierten autom�ticamente en cero ni en no aplica. Un puntaje completo requiere resolver todos los componentes aplicables y la elegibilidad. Los l�mites muestran los extremos por componentes pendientes, no intervalos estad�sticos de confianza. El promedio de las fichas completas se etiqueta como parcial. La vista anual incluye solo los meses observados y utiliza observaciones tienda/mes; no representa el a�o calendario completo.
+Las repeticiones incompletas y listas sin resolver quedan pendientes; no se convierten automáticamente en cero ni en no aplica. Un puntaje completo requiere resolver todos los componentes aplicables y la elegibilidad. Los límites muestran los extremos por componentes pendientes, no intervalos estadísticos de confianza. El promedio de las fichas completas se etiqueta como parcial. La vista anual incluye solo los meses observados y utiliza observaciones tienda/mes; no representa el año calendario completo.
 
-`perfect_store_check.py` verifica de forma independiente la aritm�tica de tiendas y agregados, pesos, cobertura y huellas de evidencia. Coteja cada celda con el XLSX conservado. `perfect_store_report.py` genera un HTML aut�nomo con filtros, estados de componentes, c�lculo por tienda y celdas de origen. Indexa las referencias para transporte sin eliminar identificadores; la descarga JSON restaura todas las referencias originales. La serializaci�n descargada no se atribuye a los bytes exactos de la custodia.
+`perfect_store_check.py` verifica de forma independiente la aritmética de tiendas y agregados, pesos, cobertura y huellas de evidencia. Coteja cada celda con el XLSX conservado. `perfect_store_report.py` genera un HTML autónomo con filtros, estados de componentes, cálculo por tienda y celdas de origen. Indexa las referencias para transporte sin eliminar identificadores; la descarga JSON restaura todas las referencias originales. La serialización descargada no se atribuye a los bytes exactos de la custodia.
 
 ```powershell
 python perfect_store_report.py --runtime private/perfect-store/runtime --output private/revision/perfect-store.html
 ```
 
-El evaluador es una biblioteca y el informe opera sobre una ejecuci�n aceptada de tipo `operational_perfect_store`. La preparaci�n de configuraci�n y la admisi�n de una fuente completa son pasos expl�citos; estos m�dulos no descargan datos, no programan rec�lculos, no certifican el motor oficial ni cambian el panel autom�ticamente. Las pruebas de respuestas anchas, Perfect Store, verificaci�n independiente y transporte cubren ambig�edad, ceros/vac�os, repeticiones, aplicabilidad, f�rmulas, referencias originales y restauraci�n �ntegra de los datos consultables.
+El evaluador es una biblioteca y el informe opera sobre una ejecución aceptada de tipo `operational_perfect_store`. La preparación de configuración y la admisión de una fuente completa son pasos explícitos; estos módulos no descargan datos, no programan recálculos, no certifican el motor oficial ni cambian el panel automáticamente. Las pruebas de respuestas anchas, Perfect Store, verificación independiente y transporte cubren ambigüedad, ceros/vacíos, repeticiones, aplicabilidad, fórmulas, referencias originales y restauración íntegra de los datos consultables.
 
 
-`category_eligibility.py` resuelve una rama hija no respondida solo cuando dos listas parentales expl�citas y compatibles excluyen su familia y no existe evidencia positiva en sus subcategor�as. Los conflictos permanecen documentados. `perfect_store_findings.py` agrupa contradicciones por visita, mes, familia y regla; conserva referencias a respuestas y celdas originales. Sus se�ales se admiten en una ejecuci�n independiente del motor y pueden exportarse con `review_queue.py`; no deciden fraude, no modifican fuentes y no registran revisiones humanas autom�ticas. El informe muestra las se�ales y las exclusiones parentales con su respaldo.
+`category_eligibility.py` resuelve una rama hija no respondida solo cuando dos listas parentales explícitas y compatibles excluyen su familia y no existe evidencia positiva en sus subcategorías. Los conflictos permanecen documentados. `perfect_store_findings.py` agrupa contradicciones por visita, mes, familia y regla; conserva referencias a respuestas y celdas originales. Sus señales se admiten en una ejecución independiente del motor y pueden exportarse con `review_queue.py`; no deciden fraude, no modifican fuentes y no registran revisiones humanas automáticas. El informe muestra las señales y las exclusiones parentales con su respaldo.
 
 
 ## Observador continuo de Perfect Store
@@ -279,7 +279,7 @@ La configuracion exige observaciones por formulario con rutas absolutas y SHA-25
 
 ### Actividad ambigua fuera de la enumeracion de marcas
 
-El lector generico conserva repeticiones candidatas cuando una celda compartida tiene texto. El calculo de estante distingue esa incertidumbre de evidencia de una fila fisica adicional: solo separa el nombre generico ambiguo fuera del rango declarado cuando numero esperado y seleccion unica coinciden, todos sus valores no vacios proceden exclusivamente del encabezado compartido �Cual es el nombre de esta otra marca�, y no hay valor propio en alias explicitos, codigos, caras, SKU u otro campo. Si el nombre esta dentro de las filas esperadas o existe cualquier evidencia especifica de fila (incluso0caras), mantiene el bloqueo. Comprueba tambien indices de repeticion completos.
+El lector generico conserva repeticiones candidatas cuando una celda compartida tiene texto. El calculo de estante distingue esa incertidumbre de evidencia de una fila fisica adicional: solo separa el nombre generico ambiguo fuera del rango declarado cuando numero esperado y seleccion unica coinciden, todos sus valores no vacios proceden exclusivamente del encabezado compartido «Cual es el nombre de esta otra marca», y no hay valor propio en alias explicitos, codigos, caras, SKU u otro campo. Si el nombre esta dentro de las filas esperadas o existe cualquier evidencia especifica de fila (incluso0caras), mantiene el bloqueo. Comprueba tambien indices de repeticion completos.
 
 La celda y sus rutas candidatas quedan conservadas sin asignarlas a ninguna marca/categoria. Se registran observaciones informativas agrupadas por celda original; no se multiplican por categoria ni se presentan como revisiones humanas favorables. Se distinguen de los bloqueos que impiden un denominador. El informe muestra ambas clases y senala los resultados completos que conservan incertidumbre de texto auxiliar.
 

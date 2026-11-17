@@ -6,7 +6,7 @@ def pack(original):
  cells=[]
  for key in cell_ids:
   c=r['cells'][key]
-  if set(c)!={'source_sha256','sheet','source_row','coordinate','column','value','kobo_id'} or c['source_sha256']!=r['source_sha256'] or c['sheet']!='Env�os':raise ValueError('Unexpected original cell shape or source')
+  if set(c)!={'source_sha256','sheet','source_row','coordinate','column','value','kobo_id'} or c['source_sha256']!=r['source_sha256'] or c['sheet']!='Envíos':raise ValueError('Unexpected original cell shape or source')
   cells.append([col[c['column']],c['source_row'],c['coordinate'],c['value'],c['kobo_id']])
  r['cells']=cells;r['answer_evidence']=[dict(r['answer_evidence'][k],cell_ids=[ci[c] for c in r['answer_evidence'][k]['cell_ids']]) for k in answer_ids];r['evidence_sets']=[[ai[k] for k in group] for group in r['evidence_sets']]
  for inv in r['inventories']:
@@ -19,7 +19,7 @@ def pack(original):
  return r,{'schema':'mindtec-integrated-reference-indices/1','cell_ids':cell_ids,'answer_ids':answer_ids,'columns':columns,'lossless':True}
 
 def restore(packed,transport):
- r=copy.deepcopy(packed);cids=transport['cell_ids'];aids=transport['answer_ids'];columns=transport['columns'];r['cells']={key:{'source_sha256':r['source_sha256'],'sheet':'Env�os','source_row':c[1],'coordinate':c[2],'column':columns[c[0]],'value':c[3],'kobo_id':c[4]} for key,c in zip(cids,r['cells'],strict=True)};r['answer_evidence']={key:dict(a,cell_ids=[cids[i] for i in a['cell_ids']]) for key,a in zip(aids,r['answer_evidence'],strict=True)};r['evidence_sets']=[[aids[i] for i in group] for group in r['evidence_sets']]
+ r=copy.deepcopy(packed);cids=transport['cell_ids'];aids=transport['answer_ids'];columns=transport['columns'];r['cells']={key:{'source_sha256':r['source_sha256'],'sheet':'Envíos','source_row':c[1],'coordinate':c[2],'column':columns[c[0]],'value':c[3],'kobo_id':c[4]} for key,c in zip(cids,r['cells'],strict=True)};r['answer_evidence']={key:dict(a,cell_ids=[cids[i] for i in a['cell_ids']]) for key,a in zip(aids,r['answer_evidence'],strict=True)};r['evidence_sets']=[[aids[i] for i in group] for group in r['evidence_sets']]
  for inv in r['inventories']:
   for obs in inv['unattributed']:obs['cell_id']=cids[obs['cell_id']]
  for wrapper in r.get('findings',[]):
