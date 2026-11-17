@@ -312,3 +312,15 @@ python cold_share_report.py --runtime private/cold-share/runtime --output privat
 Si aparecen filas frias en una categoria excluida, se conserva la decision de origen y el conflicto queda pendiente en este indicador, sin eliminar la visita del denominador por conveniencia. Las limitaciones de esquema son informativas y distintas de contradicciones o datos vacios; ninguna senal determina fraude. Se conservan originales, fuente PS aceptada, politica, admision, configuracion observada y codigo en custodia propia. La vista HTML tiene filtros de marca/categoria/mes/ano, grafico solo para puntos completos, visitas y celdas, con descarga que restaura exactamente el resultado retenido. El transporte agrupa listas de referencias repetidas sin cambiar IDs ni valores.
 
 Son comandos locales e instantaneas; todavia no constituyen otro observador continuo ni una actualizacion del sitio hospedado. Los conteos de caras no acreditan temperatura, funcionamiento o acceso comercial a equipos. La equivalencia con el panel requiere version, universo y reglas compatibles. Los insumos, evidencias UI y resultados reales permanecen privados; solo codigo y fixtures sinteticos se comparten.
+
+
+### Integrar frio en la vista compartida
+
+La integracion admite opcionalmente una cuarta custodia con `--cold-runtime`. Comprueba la misma fuente PS, snapshot, XLSX y politica; el catalogo, cohorte, inventarios y referencias de agregados deben ser exhaustivos. La decision de elegibilidad original se conserva aun cuando el indicador de frio deba abrir un conflicto adicional. Nunca sobreescribe los valores ni denominadores de PS, distribucion o estante. La union de evidencia preserva las huellas originales y rechaza conflictos o referencias ausentes.
+
+```text
+python integrated_reconstruction.py --ps-runtime private/perfect-store-continuous/runtime --distribution-runtime private/numeric-distribution/runtime --shelf-runtime private/shelf-share/runtime --cold-runtime private/cold-share/runtime --runtime private/integrated-four/runtime
+python integrated_report.py --runtime private/integrated-four/runtime --output private/revision/cuatro-indicadores.html
+```
+
+El mismo renderizador admite tres o cuatro indicadores. Agrega columna, filtros, grafico, visitas y celdas de frio y conserva las limitaciones de esquema como una clase distinta de los nombres auxiliares informativos. La lista global antigua deja pendientes los resultados por categoria, incluido el ano observado; no se omite un mes para completar el total. Las fuentes, configuracion de alcance observada, ejecuciones y codigo retenido de frio quedan vinculados a la proyeccion. Los ocho KPI restantes conservan sus requisitos especificos. Esta integracion es una instantanea de publicacion manual, no instala otro observador ni activa envios.

@@ -39,4 +39,33 @@ class ProjectionTests(unittest.TestCase):
    with self.assertRaises(ValueError):combined.captured(root/'absent','operational_perfect_store')
    self.assertFalse((root/'absent').exists())
 
+class ColdProjectionTests(unittest.TestCase):
+ def inputs(self):
+  import cold_share
+  ps,nd,sh,sources=fixture();a=adapter();cold=cold_share.evaluate(a,CATALOG,[('1','2026-09')],ps['eligibility_checks'],ps['answer_evidence'],ps['cells']);cold.update(source_ps_run_id=sources['perfect_store']['run_id'],source_ps_snapshot_sha256=sources['perfect_store']['snapshot_sha256']);return combined.project(ps,nd,sh,sources),cold,{'run_id':'cold-run','snapshot_sha256':'cold-snapshot','rule_version':'synthetic'}
+ def test_fourth_metric_preserves_original_three_and_roundtrips(self):
+  base,cold,meta=self.inputs();before=copy.deepcopy(base);r=combined.attach_cold(base,cold,meta);self.assertEqual(base,before)
+  for old,new in zip(base['series'],r['series']):
+   for key in ['ps','nd','sh']:self.assertEqual(old[key],new[key])
+   self.assertEqual(new['cf']['state'],'zero_observed_faces');self.assertIsNone(new['cf']['value'])
+  p,t=transport.pack(r);self.assertEqual(transport.restore(p,t),r);self.assertEqual(r['sources']['cold'],meta)
+ def test_incompatible_cold_sources_rejected(self):
+  for field in ['source_ps_run_id','source_ps_snapshot_sha256','source_sha256']:
+   base,cold,meta=self.inputs();cold[field]='different'
+   with self.assertRaises(ValueError):combined.attach_cold(base,cold,meta)
+ def test_cold_visits_and_inventory_scope_must_match(self):
+  for key in ['stores','category_inventories']:
+   base,cold,meta=self.inputs();cold[key]=[]
+   with self.assertRaises(ValueError):combined.attach_cold(base,cold,meta)
+ def test_cold_aggregate_does_not_silently_omit_a_store(self):
+  base,cold,meta=self.inputs();cold['monthly'][0]['store_rows']=[]
+  with self.assertRaises(ValueError):combined.attach_cold(base,cold,meta)
+ def test_original_gate_and_cold_denominator_not_overwritten(self):
+  for key,value in [('source_eligible',False),('category_faces',3)]:
+   base,cold,meta=self.inputs();cold['stores'][0][key]=value
+   with self.assertRaises(ValueError):combined.attach_cold(base,cold,meta)
+ def test_corrupt_cold_evidence_cannot_be_merged(self):
+  base,cold,meta=self.inputs();next(iter(cold['cells'].values()))['value']='altered'
+  with self.assertRaises(ValueError):combined.attach_cold(base,cold,meta)
+
 if __name__=='__main__':unittest.main()
