@@ -296,3 +296,19 @@ python integrated_report.py --runtime private/integrated-reconstruction/runtime 
 El HTML usa filtros compartidos de periodo, marca, categoria y empresa historica. Conserva marcas sin homologacion y visitas no elegibles. Muestra PS, distribucion y estante por separado, sus pendientes, componentes, pesos, denominadores, celdas y hallazgos de origen. La vista anual retiene la agregacion de cada indicador: media de puntajes PS, distribucion por visitas/mes y estante por suma de caras. Los otros nueve KPI muestran requisitos especificos; no se imputan con datos de otro indicador. La empresa historica no acredita relacion con un distribuidor.
 
 `integrated_transport.py` compacta referencias mediante indices reversibles. La descarga restaura exactamente la proyeccion retenida y los IDs de evidencia originales, sin atribuirle identidad de bytes con todos los archivos fuente. La configuracion operativa y las exclusiones permanecen visibles. No calcula una confianza global ni prueba veracidad de campo, causalidad o fraude. El HTML es de lectura; no guarda decisiones humanas. Son ejecuciones por comando e instantaneas de publicacion manual, no un observador adicional ni envios automaticos. El codigo y fixtures sinteticos pueden compartirse; los informes, fuentes y configuraciones reales conservan su acceso privado.
+
+
+### Share en frio con universos explicitos
+
+`cold_share.py` deriva caras frias por categoria desde respuestas originales, sin usar caras de estante ni cifras publicadas. Exige enumeracion completa, codigos unicos y conteos enteros no negativos. La lista global del formulario anterior conserva evidencia pero no se reparte entre categorias por el nombre de marca. No convierte un campo vacio en cero, ni un subtotal conocido en denominador completo. El ano observado suma caras y permanece pendiente si falta algun mes aplicable.
+
+```text
+python cold_share_run.py --provenance-runtime private/numeric-distribution/runtime --runtime private/cold-share/runtime --cooler-rules private/cold-share/cooler-scope-rules.json
+python cold_share_report.py --runtime private/cold-share/runtime --output private/revision/share-frio.html
+```
+
+`--cooler-rules` es opcional. Sin regla admitida se mantiene la interpretacion conservadora. La configuracion `mindtec-cold-layout/1` vincula SHA del XLSX, version, formulario exacto y observaciones externas por ruta y huella. Solo admite `explicit_zero_bsa_count_means_no_bsa_cold_faces`: cero equipos especificamente pertenecientes a bebidas sin alcohol o que las contienen permite cero caras BSA, con puerta positiva de equipos y sin filas o conteos contradictorios. No se extiende a lacteos ni utiliza un total general para completar el conteo BSA. Cada formulario configurado exige evidencia conservada en un envoltorio con su huella original; alterar la evidencia rechaza el calculo.
+
+Si aparecen filas frias en una categoria excluida, se conserva la decision de origen y el conflicto queda pendiente en este indicador, sin eliminar la visita del denominador por conveniencia. Las limitaciones de esquema son informativas y distintas de contradicciones o datos vacios; ninguna senal determina fraude. Se conservan originales, fuente PS aceptada, politica, admision, configuracion observada y codigo en custodia propia. La vista HTML tiene filtros de marca/categoria/mes/ano, grafico solo para puntos completos, visitas y celdas, con descarga que restaura exactamente el resultado retenido. El transporte agrupa listas de referencias repetidas sin cambiar IDs ni valores.
+
+Son comandos locales e instantaneas; todavia no constituyen otro observador continuo ni una actualizacion del sitio hospedado. Los conteos de caras no acreditan temperatura, funcionamiento o acceso comercial a equipos. La equivalencia con el panel requiere version, universo y reglas compatibles. Los insumos, evidencias UI y resultados reales permanecen privados; solo codigo y fixtures sinteticos se comparten.
