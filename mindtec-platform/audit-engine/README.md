@@ -324,3 +324,23 @@ python integrated_report.py --runtime private/integrated-four/runtime --output p
 ```
 
 El mismo renderizador admite tres o cuatro indicadores. Agrega columna, filtros, grafico, visitas y celdas de frio y conserva las limitaciones de esquema como una clase distinta de los nombres auxiliares informativos. La lista global antigua deja pendientes los resultados por categoria, incluido el ano observado; no se omite un mes para completar el total. Las fuentes, configuracion de alcance observada, ejecuciones y codigo retenido de frio quedan vinculados a la proyeccion. Los ocho KPI restantes conservan sus requisitos especificos. Esta integracion es una instantanea de publicacion manual, no instala otro observador ni activa envios.
+
+
+### Disponibilidad declarada y alcance del cuestionario
+
+`declared_availability.py` calcula ausencia de quiebre declarado por empresa entre tiendas que dicen comprar a esa empresa; su complemento es el quiebre declarado. No mide inventario fisico de SKU ni disponibilidad independiente de cada marca. Las referencias de marca conservan la homologacion historica y comparten el mismo resultado empresarial, sin multiplicar la muestra. Se conservan las marcas sin homologacion.
+
+La configuracion opcional `mindtec-company-question-universe/1` vincula archivo de respuestas, version, formulario exacto, empresas ofrecidas y observaciones conservadas por huella. Una empresa no ofrecida queda sin medicion. Sin universo admitido, una empresa no seleccionada permanece desconocida. La ausencia solo acredita no comprador cuando la empresa era una opcion y la seleccion, contador e identidades de las repeticiones son completos. Se diferencian no comprador, no preguntado, pendiente, quiebre y ausencia de quiebre. El ano suma tiendas/mes, sin omitir meses no cubiertos para completar un punto.
+
+```text
+python declared_availability_run.py --provenance-runtime private/numeric-distribution/runtime --runtime private/availability/runtime --question-universe private/availability/question-universe.json --definition-evidence private/availability/definition.txt --definition-sha256 SHA256_DE_LA_EVIDENCIA
+python declared_availability_report.py --runtime private/availability/runtime --output private/revision/sin-quiebre.html
+```
+
+El ejecutor conserva fuentes PS aceptadas, originales, politica, admision, codigo y observaciones; rechaza huellas alteradas. El informe presenta empresas, referencias de marca, visitas y celdas, y descarga el resultado retenido. No instala otro observador ni activa envios. Las senales no deciden fraude ni validan automaticamente respuestas.
+
+### Perfect Store: no preguntado no equivale a No aplica
+
+PS operativo2.2.0 exige universo de empresas ofrecidas y enumeracion completa para declarar No aplica por ausencia de compra. Una empresa fuera de las opciones del formulario, o sin universo admitido, deja el componente Sin quiebre pendiente. Una declaracion negativa con detalles de agotamiento contradictorios tambien queda pendiente. Una respuesta explicita de la empresa compradora sigue siendo una declaracion empresarial, no inventario de SKU.
+
+`stock_question_universe` en la configuracion PS usa el mismo contrato y observaciones originales retenidas como base64 con su huella; deben cubrir cada formulario admitido y coincidir con el SHA del XLSX. Cambiar esta configuracion requiere una nueva admision. El observador conserva versiones previas y admite el recalculo con su codigo/configuracion nuevos. Las demas componentes y elegibilidades no se corrigen por suposicion. El modulo de disponibilidad puede detectar el uso historico de No aplica para empresas no ofrecidas, como hallazgo metodologico trazable, sin inventar un puntaje corregido ni inferir revisiones humanas.
