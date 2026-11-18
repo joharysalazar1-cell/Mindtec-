@@ -48,9 +48,14 @@ bindings or implementation cause a degraded status. A bounded observer reports
 `stopped` after exiting, even if its final poll was healthy. Do not interpret a
 health file as proof that a process is still alive.
 
-This observer is not yet an additional supervisor job. It performs no network
-access or automatic publishing and does not change the running reconstruction
-pipeline. A historical correction requires the original
+The supervisor supports a `sku_catalog` job with absolute `workbook`, `catalog`
+and `runtime` paths and an `interval` of at least 60 seconds. The fixed command is
+`sku_catalog_watch.py`; it does not supply a bounded iteration count. SKU custody
+must not overlap another job's custody, and its inputs must be outside every
+supervised custody directory. Health exposes the retained context hash and
+custody status while preserving the supervisor's owned-process restart behavior.
+
+It performs no network access or automatic publishing. A historical correction requires the original
 form/version choice list and an explicit version-to-submission correspondence.
 Keep original code and label alongside any reviewed correspondence.
 

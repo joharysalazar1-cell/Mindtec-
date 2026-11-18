@@ -5,8 +5,8 @@ import windows_job
 
 ROOT=Path(__file__).resolve().parent
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
-JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime'],'perfect_store':['admission','runtime','report_dir'],'reconstruction':['profile','runtime','ps_runtime']}
-JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py','perfect_store':'perfect_store_watch.py','reconstruction':'reconstruction_watch.py'}
+JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime'],'perfect_store':['admission','runtime','report_dir'],'reconstruction':['profile','runtime','ps_runtime'],'sku_catalog':['workbook','catalog','runtime']}
+JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py','perfect_store':'perfect_store_watch.py','reconstruction':'reconstruction_watch.py','sku_catalog':'sku_catalog_watch.py'}
 def canonical(v):return json.dumps(v,sort_keys=True,ensure_ascii=False,separators=(',',':'))
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def atomic(path,value):
@@ -51,6 +51,10 @@ def config_file(path):
   runtimes.add(root)
   interval=job.get('interval',10)
   if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 1<=interval<=(86400 if job['kind']=='feed' else 3600):raise ValueError('Observer interval outside bounds')
+  if job['kind']=='sku_catalog':
+   from sku_catalog_watch import Observer as SkuObserver
+   if interval<60:raise ValueError('SKU catalog interval must be at least 60 seconds')
+   SkuObserver(job['workbook'],job['catalog'],job['runtime'])
   if job['kind']=='reconstruction':
    from reconstruction_cycle import profile as reconstruction_profile
    selected,_,_=reconstruction_profile(job['profile'])
@@ -97,6 +101,11 @@ def config_file(path):
    if Path(feed['runtime']).resolve()!=root or interval!=feed['interval']:raise ValueError('Feed runtime and interval must match its configuration')
    feeds.append(feed)
   if job.get('initial_reference') and not Path(job['initial_reference']).is_absolute():raise ValueError('Absolute bootstrap path required')
+ for job in config['jobs']:
+  if job['kind']=='sku_catalog':
+   own=Path(job['runtime']).resolve()
+   if any(other!=own and (own.is_relative_to(other) or other.is_relative_to(own)) for other in runtimes):raise ValueError('SKU custody must not overlap any supervised runtime')
+   if any(Path(job[k]).resolve().is_relative_to(r) for k in ('workbook','catalog') for r in runtimes):raise ValueError('SKU inputs must be outside all supervised custody')
  report_dirs=set()
  for job in perfect_stores:
   report_dir=Path(job['report_dir']).resolve()
@@ -157,6 +166,7 @@ def health(job,pid,clock=None):
   if age< -5 or age>max(30,job.get('interval',10)*4):return {'status':'degraded','reason':'heartbeat_outside_window','age_seconds':round(age,1)}
   # Health never authorizes termination. Only Popen.poll establishes an exit.
   if job['kind'] in ('collection','perfect_store'):return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),**({'report_path':h.get('report_path'),'finding_count':h.get('finding_count')} if job['kind']=='perfect_store' else {})}
+  if job['kind']=='sku_catalog':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),'context_sha256':(h.get('last_accepted') or {}).get('context_sha256')}
   if job['kind']=='reconstruction':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),'report_path':h.get('report_path'),'completed_stages':h.get('completed_stages')}
   if job['kind']=='scan_comparison':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'comparison_custody_verified':h.get('comparison_custody_verified')}
   return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id') or (h.get('last_success') or {}).get('run_id'),'error_type':h.get('error_type'),**({'reason':h.get('reason'),'http_status':h.get('http_status')} if job['kind']=='feed' else {}),**({'state':h.get('state'),'delivery':h.get('delivery'),'reason':h.get('reason')} if job['kind']=='outbox' else {}),**({'state':h.get('state'),'reason':h.get('reason'),'remote_verified_this_poll':h.get('remote_verified_this_poll'),'last_remote_check_at':h.get('last_remote_check_at')} if job['kind']=='publisher' else {})}
