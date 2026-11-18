@@ -355,3 +355,15 @@ python integrated_report.py --runtime private/integrated-five/runtime --output p
 ```
 
 La seccion empresarial usa una fila por empresa/periodo, sin multiplicar la muestra por marca o categoria. Los filtros de marca/categoria eligen referencias historicas; no reducen el denominador empresarial. Mantiene visitas no compradoras, empresas no ofrecidas y observaciones pendientes como estados distintos. La vista anual suma compradores de los meses observados y no publica un punto omitiendo meses sin cobertura. Cada fila abre todas las visitas y sus celdas originales. El JSON descargado restaura exactamente la proyeccion retenida, incluida esta evidencia. La regla oficial de disponibilidad de marca/SKU sigue siendo un requisito separado; esta referencia no la certifica. No se instala otro observador ni se habilitan descargas o envios automaticos.
+
+### POP por empresa propietaria entre tiendas con la marca
+
+`declared_pop.py` reconstruye material declarado de la empresa propietaria entre tiendas con presencia declarada de la marca. Usa el formulario exacto, categorias de material y opciones de marcas admitidas por huella del XLSX. Los formularios basados en marcas no se mezclan con versiones posteriores basadas en empresas. El denominador es presencia de marca, no todas las tiendas de la categoria ni los compradores de la empresa. El ano suma tiendas/mes de los meses observados, sin promediar porcentajes o quitar pendientes.
+
+La politica `confirmed_absence_in_answered_pop_section` permite que una seccion POP respondida sin material registrado de la empresa cuente como ausencia confirmada (0). Requiere una decision de negocio explicita retenida por SHA, distinta de la evidencia original: vender una marca no implica tener POP. No exige que toda empresa figure como opcion separada. Conserva Otros/textos sin inventar propietarios; las notas informativas no bloquean el cero autorizado. Las listas seleccionadas sin responder, las contradicciones, la presencia desconocida y el propietario sin homologar siguen pendientes. El modo estricto previo es una politica alternativa, no prueba de que los ceros del criterio de negocio sean errores.
+
+```powershell
+python declared_pop_run.py --ps-runtime private/perfect-store-continuous/runtime --runtime private/pop/runtime --question-scope private/pop/question-scope-user-absence-v2.json --definition-evidence private/pop/glossary.txt --definition-sha256 SHA256_DE_LA_DEFINICION
+```
+
+El ejecutor exige PS aceptado por observador, fuentes/admisiones/politica coherentes y observaciones de formulario y decision de ausencia sin alteraciones; conserva originales y codigo. Los limites por datos faltantes son aritmeticos, no intervalos de confianza ni porcentaje de confiabilidad. Compara componentes historicos POP para detectar diferencias metodologicas sin cambiar PS ni inferir fraude o revisiones humanas. Esta derivacion es local por comando y aun requiere integracion de su vista; no instala otro observador ni activa envios.
