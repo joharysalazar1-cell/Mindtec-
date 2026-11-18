@@ -36,7 +36,7 @@ python reconstruction_watch.py --profile private/reconstruction-profile.json --i
 python -m unittest test_reconstruction_cycle test_reconstruction_watch -q
 ```
 
-The unbounded observer continues only while its process is running. Durable supervision/startup registration is a separate step; creating a profile or successfully running one cycle does not install a service. A bounded observer explicitly marks its health file `stopped` when it exits, preserving the last poll status and accepted result.
+The unbounded observer continues only while its process is running. Durable supervision uses a configured supervisor job; creating a profile or successfully running one cycle alone does not install a service. A bounded observer explicitly marks its health file `stopped` when it exits, preserving the last poll status and accepted result.
 
 ## Acceptance and recovery
 
@@ -53,3 +53,12 @@ Source-bound questionnaire rules deliberately fail when a new source no longer m
 ## Scope
 
 Local custody verification establishes reproducibility and provenance, not field truth, official-version equivalence, city-wide sampling confidence or fraud. A new local HTML is not automatically the published dashboard. Missing values and unresolved official rules remain visible.
+
+
+## Supervisor integration
+
+A supervisor job of kind `reconstruction` requires absolute `profile`, `runtime` and `ps_runtime`, plus a unique `name` and an `interval` of at least 60 seconds. The selected profile must use those exact source and custody paths. Its reports must remain separate from all supervised custody and other report directories. Exactly one configured `perfect_store` observer must own the selected source.
+
+The supervisor launches only the fixed `reconstruction_watch.py` script with profile and interval. It waits for fresh, owned Perfect Store health with verified custody before first launch. A stale or borrowed health file does not authorize a launch, and health never authorizes killing a process. Exited children restart through the supervisor's owned process handles and backoff. A running but degraded child is not killed merely because its calculation takes time or its rules require attention.
+
+The supervisor health projection includes cycle state, custody verification, completed stages and report path, with `network_delivery: false`. After changing shared loaded code, stop and restart all affected observers in a controlled release; preserve the last accepted snapshots and existing scheduled-task definition. Startup/recovery is limited to the machine and session conditions of that configured task; this is not an always-on external service.
