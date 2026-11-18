@@ -16,6 +16,11 @@ def pack(original):
   for key,mapping in [('answer_ids',ai),('cell_ids',ci)]:
    if key in e:e[key]=[mapping[x] for x in e[key]]
   if 'cell_id' in e:e['cell_id']=ci[e['cell_id']]
+ if 'conversion' in r:
+  ids={s['id']:i for i,s in enumerate(r['conversion']['stores'])}
+  if len(ids)!=len(r['conversion']['stores']):raise ValueError('Duplicate conversion store identity')
+  for name in ['monthly','annual_observed_months']:
+   for item in r['conversion'][name]:item['store_rows']=[ids[k] for k in item['store_rows']]
  return r,{'schema':'mindtec-integrated-reference-indices/1','cell_ids':cell_ids,'answer_ids':answer_ids,'columns':columns,'lossless':True}
 
 def restore(packed,transport):
@@ -27,4 +32,7 @@ def restore(packed,transport):
   if 'answer_ids' in e:e['answer_ids']=[aids[i] for i in e['answer_ids']]
   if 'cell_ids' in e:e['cell_ids']=[cids[i] for i in e['cell_ids']]
   if 'cell_id' in e:e['cell_id']=cids[e['cell_id']]
+ if 'conversion' in r:
+  for name in ['monthly','annual_observed_months']:
+   for item in r['conversion'][name]:item['store_rows']=[r['conversion']['stores'][i]['id'] for i in item['store_rows']]
  return r

@@ -1,9 +1,9 @@
 """Join compatible reconstruction snapshots, preserving source-index and cell lineage."""
 import argparse,copy,collections
 from pathlib import Path
-import engine,collection_watch,collection_adapter,perfect_store_check,integrated_availability,integrated_pop
+import engine,collection_watch,collection_adapter,perfect_store_check,integrated_availability,integrated_pop,integrated_conversion
 
-VERSION='integrated-reconstruction/1.3.0'
+VERSION='integrated-reconstruction/1.4.0'
 
 def identity(r):return (r['kobo_id'],r['month'],r['category'],r['brand_code'],r['brand'])
 def summary_key(r):return (r['period'],r['category'],r['brand_code'],r['brand'])
@@ -142,8 +142,8 @@ def captured(runtime,kind,observer=False):
    return {'meta':{'run_id':run['id'],'snapshot_sha256':run['snapshot_hash'],'ledger_head':head,'rule_version':rules['version']},'raw':raw,'result':result,'findings':engine.load_json_bytes(run['findings_json'].encode()),'policy':engine.load_json_bytes(run['policy_json'].encode()),'originals':originals,'execution':engine.canonical({'run':dict(run),'verified_head':head}).encode()}
   finally:e.db.execute('ROLLBACK')
 
-def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=None,availability_runtime=None,pop_runtime=None):
- target=Path(runtime).resolve();inputs=[Path(p).resolve() for p in [ps_runtime,distribution_runtime,shelf_runtime]+([cold_runtime] if cold_runtime is not None else [])+([availability_runtime] if availability_runtime is not None else [])+([pop_runtime] if pop_runtime is not None else [])]
+def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=None,availability_runtime=None,pop_runtime=None,conversion_runtime=None):
+ target=Path(runtime).resolve();inputs=[Path(p).resolve() for p in [ps_runtime,distribution_runtime,shelf_runtime]+([cold_runtime] if cold_runtime is not None else [])+([availability_runtime] if availability_runtime is not None else [])+([pop_runtime] if pop_runtime is not None else [])+([conversion_runtime] if conversion_runtime is not None else [])]
  if any(target.is_relative_to(p) or p.is_relative_to(target) for p in inputs):raise ValueError('Separate projection custody required')
  ps=captured(ps_runtime,'operational_perfect_store',True);nd=captured(distribution_runtime,'declared_numeric_distribution');sh=captured(shelf_runtime,'declared_shelf_share')
  if any(engine.canonical(c['policy'])!=engine.canonical(ps['policy']) for c in [nd,sh]):raise ValueError('Exclusion policies differ')
@@ -167,6 +167,11 @@ def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=N
    decision=engine.load_json_bytes(pop['originals']['absence_rule_evidence'])
    if decision.get('original_sha256')!=pop['result']['question_universe']['absence_rule_evidence']['sha256']:raise ValueError('POP business rule evidence differs')
   pop['meta']['scope_version']=pop['result']['question_universe_version'];pop['meta']['absence_policy']=pop['result']['absence_policy'];result=integrated_pop.attach(result,pop['result'],pop['meta'])
+ conversion=None
+ if conversion_runtime is not None:
+  conversion=captured(conversion_runtime,'declared_cold_conversion')
+  if engine.canonical(conversion['policy'])!=engine.canonical(ps['policy']):raise ValueError('Conversion exclusion policy differs')
+  result=integrated_conversion.attach(result,conversion['result'],conversion['meta'])
  book=collection_adapter.workbook_tables('retained.xlsx',ps['originals']['detailed_workbook']);checks=perfect_store_check.verify_cells(result,book)
  result['findings']=[{'origin':origin,'finding':f} for origin,cut in [('perfect_store',ps),('shelf',sh)] for f in cut['findings']]
  refs={'source_'+name:(cut['raw'],'.json') for name,cut in [('perfect_store',ps),('distribution',nd),('shelf',sh)]};refs.update({'execution_'+name:(cut['execution'],'.json') for name,cut in [('perfect_store',ps),('distribution',nd),('shelf',sh)]});refs.update({'detailed_workbook':(ps['originals']['detailed_workbook'],'.xlsx'),'normalized_workbook':(ps['originals']['normalized_result_workbook'],'.xlsx'),'operational_configuration':(ps['originals']['operational_configuration'],'.json'),'implementation':(engine.code_bundle({n:Path(__file__).with_name(n).read_bytes() for n in ['engine.py','collection_watch.py','collection_adapter.py','collection_audit.py','invoice_adapter.py','perfect_store_check.py',Path(__file__).name]}),'.json')})
@@ -174,7 +179,7 @@ def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=N
   result['findings'] += [{'origin':'cold','finding':f} for f in cold['findings']]
   refs.update({'source_cold':(cold['raw'],'.json'),'execution_cold':(cold['execution'],'.json'),'source_cold_implementation':(cold['originals']['implementation'],'.json')})
   refs.update({k:(v,'.json') for k,v in cold['originals'].items() if k.startswith('cooler_scope_')})
- refs['implementation']=(engine.code_bundle({n:Path(__file__).with_name(n).read_bytes() for n in ['engine.py','collection_watch.py','collection_adapter.py','collection_audit.py','invoice_adapter.py','perfect_store_check.py','integrated_availability.py','integrated_pop.py',Path(__file__).name]}),'.json')
+ refs['implementation']=(engine.code_bundle({n:Path(__file__).with_name(n).read_bytes() for n in ['engine.py','collection_watch.py','collection_adapter.py','collection_audit.py','invoice_adapter.py','perfect_store_check.py','integrated_availability.py','integrated_pop.py','integrated_conversion.py','cold_conversion.py',Path(__file__).name]}),'.json')
  if availability is not None:
   result['findings'] += [{'origin':'availability','finding':f} for f in availability['findings']]
   refs.update({'source_availability':(availability['raw'],'.json'),'execution_availability':(availability['execution'],'.json')})
@@ -183,6 +188,10 @@ def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=N
   result['findings'] += [{'origin':'pop','finding':f} for f in pop['findings']]
   refs.update({'source_pop':(pop['raw'],'.json'),'execution_pop':(pop['execution'],'.json')})
   refs.update({'pop_'+k:(v,'.json') for k,v in pop['originals'].items() if k in ['implementation','question_scope','observed_definition','absence_rule_evidence'] or k.startswith('question_observation_')})
+ if conversion is not None:
+  result['findings'] += [{'origin':'conversion','finding':f} for f in conversion['findings']]
+  refs.update({'source_conversion':(conversion['raw'],'.json'),'execution_conversion':(conversion['execution'],'.json')})
+  refs.update({'conversion_'+k:(v,'.json') for k,v in conversion['originals'].items() if k in ['implementation','scope_configuration','observed_definition'] or k.startswith('scope_observation_')})
  rules={'kind':'integrated_reconstruction','version':VERSION,'reference_sources':{k:engine.sha(v[0]) for k,v in refs.items()}};summary={'visits':len(result['visits']),'catalogue_entries':len(result['catalogue']),'monthly_rows':sum(s['kind']=='month' for s in result['series']),'observed_year_rows':sum(s['kind']!='month' for s in result['series']),'verified_cells':checks['verified_original_cells']}
  if pop is not None:summary['pop_complete_monthly']=sum(s['kind']=='month' and s['pp']['state']=='complete' for s in result['series'])
  if availability is not None:summary['company_reference_rows']=len(result['availability']['series'])
@@ -192,4 +201,4 @@ def execute(ps_runtime,distribution_runtime,shelf_runtime,runtime,cold_runtime=N
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__)
  for name in ['ps-runtime','distribution-runtime','shelf-runtime','runtime']:p.add_argument('--'+name,required=True,type=Path)
- p.add_argument('--cold-runtime',type=Path);p.add_argument('--availability-runtime',type=Path);p.add_argument('--pop-runtime',type=Path);a=p.parse_args();print(engine.canonical(execute(a.ps_runtime,a.distribution_runtime,a.shelf_runtime,a.runtime,a.cold_runtime,a.availability_runtime,a.pop_runtime)))
+ p.add_argument('--cold-runtime',type=Path);p.add_argument('--availability-runtime',type=Path);p.add_argument('--pop-runtime',type=Path);p.add_argument('--conversion-runtime',type=Path);a=p.parse_args();print(engine.canonical(execute(a.ps_runtime,a.distribution_runtime,a.shelf_runtime,a.runtime,a.cold_runtime,a.availability_runtime,a.pop_runtime,a.conversion_runtime)))
