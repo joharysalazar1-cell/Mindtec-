@@ -367,3 +367,10 @@ python declared_pop_run.py --ps-runtime private/perfect-store-continuous/runtime
 ```
 
 El ejecutor exige PS aceptado por observador, fuentes/admisiones/politica coherentes y observaciones de formulario y decision de ausencia sin alteraciones; conserva originales y codigo. Los limites por datos faltantes son aritmeticos, no intervalos de confianza ni porcentaje de confiabilidad. Compara componentes historicos POP para detectar diferencias metodologicas sin cambiar PS ni inferir fraude o revisiones humanas. Esta derivacion es local por comando y aun requiere integracion de su vista; no instala otro observador ni activa envios.
+
+La opcion `integrated_reconstruction.py --pop-runtime` integra POP al mismo corte que los indicadores anteriores y la referencia empresarial. `integrated_pop.py` rechaza cortes, ejecuciones PS, configuraciones, politica, formularios, referencias de empresa/presencia o agregados incompatibles; conserva todas las visitas y las celdas. POP aparece como columna y grafico con denominador propio de presencia, y abre la regla de ausencia, formulario, listas y originales por visita. Un cero confirmado permanece medido; una marca sin tiendas presentes queda sin base, no 0/0. Las notas informativas sobre material no atribuido no anulan los ceros autorizados. La decision de negocio se conserva por huella y bytes junto con fuentes y codigo. La descarga JSON restaura exactamente esta proyeccion y sus referencias.
+
+```powershell
+python integrated_reconstruction.py --ps-runtime private/perfect-store-continuous/runtime --distribution-runtime private/numeric-distribution/runtime --shelf-runtime private/shelf-share/runtime --cold-runtime private/cold-share/runtime --availability-runtime private/availability/runtime --pop-runtime private/pop/runtime --runtime private/integrated-pop/runtime
+python integrated_report.py --runtime private/integrated-pop/runtime --output private/revision/cinco-indicadores.html
+```
