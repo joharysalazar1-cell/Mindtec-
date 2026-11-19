@@ -374,3 +374,7 @@ La opcion `integrated_reconstruction.py --pop-runtime` integra POP al mismo cort
 python integrated_reconstruction.py --ps-runtime private/perfect-store-continuous/runtime --distribution-runtime private/numeric-distribution/runtime --shelf-runtime private/shelf-share/runtime --cold-runtime private/cold-share/runtime --availability-runtime private/availability/runtime --pop-runtime private/pop/runtime --runtime private/integrated-pop/runtime
 python integrated_report.py --runtime private/integrated-pop/runtime --output private/revision/cinco-indicadores.html
 ```
+
+## Índices técnicos de calidad
+
+`data_quality.py`, `data_quality_run.py` y `data_quality_watch.py` calculan y observan nulos críticos, unicidad, formatos y existencia parcial de códigos contra un catálogo fijado por SHA-256. Separan campos ausentes, valores inválidos, ceros y controles no evaluables. Conservan originales, hallazgos por fila y recálculo verificable; no producen un porcentaje global de confianza. La supervisión `kind: data_quality` depende de una aceptación válida de facturas y no descarga ni publica información. Véase [DATA_QUALITY.md](DATA_QUALITY.md).

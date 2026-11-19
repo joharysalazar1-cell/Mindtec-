@@ -65,3 +65,9 @@ Tests:
 python -m unittest test_sku_binding_audit test_sku_catalog_contrast test_sku_catalog_run -v
 python -m unittest test_sku_catalog_watch -v
 ```
+
+## Observer code across restarts
+
+Each observed run also retains `observer-code.json`, containing the exact observer and supervisor dependency bytes with hashes. Restart validation uses the retained code hashes for the previous context, rather than incorrectly substituting the currently loaded supervisor version. The calculation inputs and result still pass the catalogue runner replay verifier. A new observer version creates its own context and preserves the previous context. Observer bundles are written atomically before promoting the accepted pointer, and altered bundles are rejected.
+
+Legacy contexts without this code bundle require an explicit recovery from preserved source bytes. Recovery must reproduce the original context hash exactly and leave the original source files, calculation manifest, result and accepted pointer unchanged. Missing code evidence must not be replaced with the new implementation by assumption. Changes to the calculation kernel itself still require a separately validated compatibility or migration procedure.

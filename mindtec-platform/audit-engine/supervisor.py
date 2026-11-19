@@ -5,8 +5,8 @@ import windows_job
 
 ROOT=Path(__file__).resolve().parent
 IMPLEMENTATION_BYTES=Path(__file__).read_bytes()
-JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime'],'perfect_store':['admission','runtime','report_dir'],'reconstruction':['profile','runtime','ps_runtime'],'sku_catalog':['workbook','catalog','runtime']}
-JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py','perfect_store':'perfect_store_watch.py','reconstruction':'reconstruction_watch.py','sku_catalog':'sku_catalog_watch.py'}
+JOB_FIELDS={'scan':['source','policy','runtime'],'invoice':['source','policy','runtime','originals'],'lineage':['invoice_runtime','scan_runtime','kpi_dir','perfect_store_dir','runtime','report'],'feed':['config','runtime'],'outbox':['invoice_runtime','scan_runtime','lineage_runtime','runtime'],'publisher':['config','runtime'],'scan_comparison':['scan_runtime','runtime'],'collection':['source','policy','crosswalk','runtime'],'perfect_store':['admission','runtime','report_dir'],'reconstruction':['profile','runtime','ps_runtime'],'sku_catalog':['workbook','catalog','runtime'],'data_quality':['invoice_runtime','catalogue','runtime']}
+JOB_SCRIPTS={'scan':'engine.py','invoice':'invoice_watch.py','lineage':'lineage_watch.py','feed':'scan_feed.py','outbox':'sync_outbox_watch.py','publisher':'sync_delivery_watch.py','scan_comparison':'scan_compare_watch.py','collection':'collection_watch.py','perfect_store':'perfect_store_watch.py','reconstruction':'reconstruction_watch.py','sku_catalog':'sku_catalog_watch.py','data_quality':'data_quality_watch.py'}
 def canonical(v):return json.dumps(v,sort_keys=True,ensure_ascii=False,separators=(',',':'))
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def atomic(path,value):
@@ -40,7 +40,7 @@ def config_file(path):
  if len(raw)>100000:raise ValueError('Supervisor configuration exceeds limit')
  config=json.loads(raw)
  if config.get('schema')!='mindtec-supervisor/1' or not isinstance(config.get('jobs'),list) or not config['jobs']:raise ValueError('Supervisor contract required')
- names=set();runtimes=set();feeds=[];outboxes=[];publishers=[];comparisons=[];perfect_stores=[];reconstructions=[]
+ names=set();runtimes=set();feeds=[];outboxes=[];publishers=[];comparisons=[];perfect_stores=[];reconstructions=[];qualities=[]
  for job in config['jobs']:
   if not isinstance(job,dict) or not isinstance(job.get('kind'),str) or job['kind'] not in JOB_FIELDS or not isinstance(job.get('name'),str) or not job['name'].strip() or job['name'] in names:raise ValueError('Unique named supported observer jobs required')
   names.add(job['name'])
@@ -51,6 +51,10 @@ def config_file(path):
   runtimes.add(root)
   interval=job.get('interval',10)
   if isinstance(interval,bool) or not isinstance(interval,(int,float)) or not 1<=interval<=(86400 if job['kind']=='feed' else 3600):raise ValueError('Observer interval outside bounds')
+  if job['kind']=='data_quality':
+   from data_quality_watch import Observer as QualityObserver
+   if interval<60:raise ValueError('Quality interval must be at least 60 seconds')
+   QualityObserver(job['invoice_runtime'],job['catalogue'],job.get('catalogue_sha256'),job['runtime']);qualities.append(job)
   if job['kind']=='sku_catalog':
    from sku_catalog_watch import Observer as SkuObserver
    if interval<60:raise ValueError('SKU catalog interval must be at least 60 seconds')
@@ -106,6 +110,11 @@ def config_file(path):
    own=Path(job['runtime']).resolve()
    if any(other!=own and (own.is_relative_to(other) or other.is_relative_to(own)) for other in runtimes):raise ValueError('SKU custody must not overlap any supervised runtime')
    if any(Path(job[k]).resolve().is_relative_to(r) for k in ('workbook','catalog') for r in runtimes):raise ValueError('SKU inputs must be outside all supervised custody')
+ for job in qualities:
+  own=Path(job['runtime']).resolve()
+  if any(other!=own and (own.is_relative_to(other) or other.is_relative_to(own)) for other in runtimes):raise ValueError('Quality custody must be separate from all supervised runtimes')
+  if any(Path(job['catalogue']).resolve().is_relative_to(r) for r in runtimes):raise ValueError('Quality catalogue must remain outside all supervised custody')
+  if len([other for other in config['jobs'] if other['kind']=='invoice' and Path(other['runtime']).resolve()==Path(job['invoice_runtime']).resolve()])!=1:raise ValueError('Quality must bind to one configured invoice observer')
  report_dirs=set()
  for job in perfect_stores:
   report_dir=Path(job['report_dir']).resolve()
@@ -145,6 +154,7 @@ def command(job):
  if job.get('kind') not in JOB_FIELDS:raise ValueError('Unsupported observer kind')
  args=[sys.executable,str(ROOT/JOB_SCRIPTS[job['kind']])]
  if job['kind']=='feed':return args+['--config',job['config']]
+ if job['kind']=='data_quality':args+=['--catalogue-sha256',job['catalogue_sha256']]
  if job['kind']=='reconstruction':return args+['--profile',job['profile'],'--interval',str(job.get('interval',60))]
  if job['kind']=='scan':args+=['watch']
  for flag in JOB_FIELDS[job['kind']]:args+=['--'+flag.replace('_','-'),job[flag]]
@@ -166,6 +176,7 @@ def health(job,pid,clock=None):
   if age< -5 or age>max(30,job.get('interval',10)*4):return {'status':'degraded','reason':'heartbeat_outside_window','age_seconds':round(age,1)}
   # Health never authorizes termination. Only Popen.poll establishes an exit.
   if job['kind'] in ('collection','perfect_store'):return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),**({'report_path':h.get('report_path'),'finding_count':h.get('finding_count')} if job['kind']=='perfect_store' else {})}
+  if job['kind']=='data_quality':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),'finding_count':h.get('finding_count')}
   if job['kind']=='sku_catalog':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),'context_sha256':(h.get('last_accepted') or {}).get('context_sha256')}
   if job['kind']=='reconstruction':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'custody_verified':h.get('custody_verified'),'network_delivery':h.get('network_delivery'),'report_path':h.get('report_path'),'completed_stages':h.get('completed_stages')}
   if job['kind']=='scan_comparison':return {'status':h.get('status','unknown'),'checked_at':h['checked_at'],'age_seconds':round(age,1),'run_id':h.get('run_id'),'error_type':h.get('error_type'),'state':h.get('state'),'reason':h.get('reason'),'comparison_custody_verified':h.get('comparison_custody_verified')}
@@ -203,6 +214,11 @@ class Supervisor:
     code=child.poll()
     if code is not None:
      self.event('observer.exited',{'job':name,'pid':child.pid,'return_code':code});self.children.pop(name);child=None;state['failures']+=1;state['next_start']=current+min(300,5*2**min(state['failures']-1,6));state['last_return_code']=code
+   if child is None and job['kind']=='data_quality':
+    dependencies=[j for j in self.jobs if j['kind']=='invoice' and Path(j['runtime']).resolve()==Path(job['invoice_runtime']).resolve()]
+    dependency=dependencies[0] if len(dependencies)==1 else None;source_child=self.children.get(dependency['name']) if dependency else None;observed=health(dependency,source_child.pid) if source_child is not None and source_child.poll() is None else {}
+    if observed.get('status')!='healthy' or not observed.get('run_id'):
+     out.append({'name':name,'process':'not_started','status':'waiting_for_source','reason':'owned_invoice_acceptance_not_ready'});continue
    if child is None and job['kind']=='reconstruction':
     dependencies=[j for j in self.jobs if j['kind']=='perfect_store' and Path(j['runtime']).resolve()==Path(job['ps_runtime']).resolve()]
     dependency=dependencies[0] if len(dependencies)==1 else None;source_child=self.children.get(dependency['name']) if dependency else None;observed=health(dependency,source_child.pid) if source_child is not None and source_child.poll() is None else {}

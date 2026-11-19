@@ -1,4 +1,5 @@
 import json
+import base64
 import unittest
 from unittest.mock import patch
 
@@ -71,6 +72,17 @@ class CatalogObserverTests(unittest.TestCase):
         with patch.object(watch.runner, 'run', side_effect=changed):
             self.assertEqual(self.observer.poll()['status'], 'degraded')
         self.assertFalse((self.runtime / 'accepted.json').exists())
+
+    def test_restart_validates_prior_code_instead_of_current_supervisor_version(self):
+        first=self.observer.poll();old_key=first['last_accepted']['context_sha256'];old_dir=self.runtime/'runs'/old_key
+        bundle=json.loads((old_dir/'observer-code.json').read_text());historic=b'older observer dependency';bundle['files']['supervisor.py']={'sha256':watch.runner.digest(historic),'content':base64.b64encode(historic).decode()};(old_dir/'observer-code.json').write_bytes(watch.runner.encode(bundle))
+        inputs={name:watch.runner.digest((old_dir/name).read_bytes())for name in ('source.xlsx','catalog.csv')}
+        historical_key=watch.runner.digest(watch.runner.encode({'binding':self.observer.binding,'inputs':inputs,'implementation':watch.observer_code_hashes(old_dir/'observer-code.json')}));new_dir=self.runtime/'runs'/historical_key;old_dir.rename(new_dir)
+        prior={'context_sha256':historical_key,'summary':first['last_accepted']['summary']};supervisor.atomic(self.runtime/'accepted.json',prior)
+        restarted=watch.Observer(self.source,self.catalog,self.runtime).poll();self.assertEqual(restarted['status'],'healthy');self.assertEqual(restarted['state'],'new_cut_accepted');self.assertNotEqual(restarted['last_accepted']['context_sha256'],historical_key);self.assertTrue(new_dir.exists())
+
+    def test_retained_observer_code_tampering_is_rejected(self):
+        first=self.observer.poll();path=self.runtime/'runs'/first['last_accepted']['context_sha256']/'observer-code.json';bundle=json.loads(path.read_text());bundle['files']['supervisor.py']['content']=base64.b64encode(b'altered').decode();path.write_bytes(watch.runner.encode(bundle));self.assertEqual(self.observer.poll()['status'],'degraded')
 
 
 if __name__ == '__main__':

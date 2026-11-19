@@ -1,10 +1,12 @@
 """Observe two explicitly selected local SKU inputs; never download or publish."""
 import argparse
+import base64
 import datetime as dt
 import json
 import os
 from pathlib import Path
 import time
+import tempfile
 
 import sku_catalog_run as runner
 import supervisor
@@ -13,6 +15,31 @@ import windows_job
 LOADED = {**runner.LOADED, 'sku_catalog_watch.py': Path(__file__).read_bytes(),
           'supervisor.py': supervisor.IMPLEMENTATION_BYTES,
           'windows_job.py': Path(windows_job.__file__).read_bytes()}
+
+
+def observer_code_hashes(path):
+    raw=Path(path).read_bytes()
+    if len(raw)>5000000:raise ValueError('Observer code bundle exceeds limit')
+    bundle=json.loads(raw)
+    if bundle.get('schema')!='mindtec-sku-observer-code/1' or set(bundle.get('files',{}))!=set(LOADED):raise ValueError('Complete retained observer code required')
+    hashes={}
+    for name,meta in bundle['files'].items():
+        content=base64.b64decode(meta['content'],validate=True)
+        if runner.digest(content)!=meta.get('sha256'):raise ValueError('Retained observer code hash differs')
+        hashes[name]=meta['sha256']
+    return hashes
+
+
+def retain_observer_code(target):
+    raw=runner.encode({'schema':'mindtec-sku-observer-code/1','files':{name:{'sha256':runner.digest(content),'content':base64.b64encode(content).decode()} for name,content in LOADED.items()}})
+    path=Path(target)/'observer-code.json'
+    with tempfile.NamedTemporaryFile(dir=target,suffix='.tmp',delete=False) as handle:
+        temp=Path(handle.name);handle.write(raw);handle.flush();os.fsync(handle.fileno())
+    try:
+        try:os.link(temp,path)
+        except FileExistsError:
+            if path.read_bytes()!=raw:raise ValueError('Existing observer implementation differs')
+    finally:temp.unlink(missing_ok=True)
 
 
 def now():
@@ -59,7 +86,7 @@ class Observer:
                                 for n in ('source.xlsx', 'catalog.csv')}
                 expected_key = runner.digest(runner.encode({'binding': self.binding,
                     'inputs': prior_inputs,
-                    'implementation': {n: runner.digest(v) for n, v in LOADED.items()}}))
+                    'implementation': observer_code_hashes(self.runtime / 'runs' / key / 'observer-code.json')}))
                 if key != expected_key or prior.get('summary') != prior_value['summary']:
                     raise ValueError('Accepted pointer differs from retained context or summary')
                 self.accepted = prior
@@ -74,6 +101,7 @@ class Observer:
                 raise ValueError('Source changed during acquisition; no promotion')
             if any(Path(__file__).with_name(name).read_bytes() != raw for name, raw in LOADED.items()):
                 raise ValueError('Implementation changed during calculation; no promotion')
+            retain_observer_code(target)
             self.accepted = {'context_sha256': context, 'summary': value['summary']}
             supervisor.atomic(pointer, self.accepted)
             health.update(status='healthy', state='verified_unchanged' if reused else 'new_cut_accepted',
