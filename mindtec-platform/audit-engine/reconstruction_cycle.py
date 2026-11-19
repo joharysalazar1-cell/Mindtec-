@@ -3,13 +3,13 @@ import argparse,base64,copy,os,re,sys
 from pathlib import Path
 import engine,collection_watch,supervisor,integrated_reconstruction as projection,integrated_report
 import numeric_distribution_run,shelf_share_run,cold_share_run,declared_availability_run
-import declared_pop_run,cold_conversion_run,weighted_inputs_run
+import declared_pop_run,cold_conversion_run,weighted_inputs_run,cold_legacy_stage
 
-VERSION='reconstruction-cycle/1.0.0'
+VERSION='reconstruction-cycle/1.1.0'
 ROOT=Path(__file__).resolve().parent
 INPUTS={'shelf_rules','cold_rules','availability_scope','availability_definition','pop_scope','pop_definition','conversion_scope','conversion_definition','weighted_definition','weighted_bindings'}
-KINDS={'distribution':'declared_numeric_distribution','shelf':'declared_shelf_share','cold':'declared_cold_share','availability':'declared_company_availability','pop':'declared_owner_pop','conversion':'declared_cold_conversion','weighted':'weighted_input_readiness','projection':'integrated_reconstruction'}
-NAMES=['category_eligibility.py','cold_conversion.py','cold_conversion_run.py','cold_share.py','cold_share_run.py','collection_adapter.py','collection_audit.py','collection_watch.py','declared_availability.py','declared_availability_run.py','declared_pop.py','declared_pop_run.py','engine.py','flat_answers.py','integrated_availability.py','integrated_conversion.py','integrated_pop.py','integrated_reconstruction.py','integrated_report.py','integrated_transport.py','invoice_adapter.py','numeric_distribution.py','numeric_distribution_run.py','other_faces.py','perfect_store.py','perfect_store_admission.py','perfect_store_check.py','purchase_binding.py','reconstruction_cycle.py','shelf_share.py','shelf_share_run.py','supervisor.py','weighted_inputs.py','weighted_inputs_run.py','windows_job.py']
+KINDS={'legacy_cold':'legacy_global_cold_reference','distribution':'declared_numeric_distribution','shelf':'declared_shelf_share','cold':'declared_cold_share','availability':'declared_company_availability','pop':'declared_owner_pop','conversion':'declared_cold_conversion','weighted':'weighted_input_readiness','projection':'integrated_reconstruction'}
+NAMES=['cold_legacy_stage.py','cold_legacy_run.py','cold_legacy_reference.py','category_eligibility.py','cold_conversion.py','cold_conversion_run.py','cold_share.py','cold_share_run.py','collection_adapter.py','collection_audit.py','collection_watch.py','declared_availability.py','declared_availability_run.py','declared_pop.py','declared_pop_run.py','engine.py','flat_answers.py','integrated_availability.py','integrated_conversion.py','integrated_pop.py','integrated_reconstruction.py','integrated_report.py','integrated_transport.py','invoice_adapter.py','numeric_distribution.py','numeric_distribution_run.py','other_faces.py','perfect_store.py','perfect_store_admission.py','perfect_store_check.py','purchase_binding.py','reconstruction_cycle.py','shelf_share.py','shelf_share_run.py','supervisor.py','weighted_inputs.py','weighted_inputs_run.py','windows_job.py']
 LOADED={name:(ROOT/name).read_bytes() for name in NAMES}
 
 
@@ -95,6 +95,7 @@ def _execute(profile_path,expected_profile=None):
  numeric_distribution_run.execute(q['ps_runtime'],root/'distribution');cuts['distribution']=stage(root,'distribution',ps)
  shelf_share_run.execute(root/'distribution',root/'shelf',paths['shelf_rules']);cuts['shelf']=stage(root,'shelf',ps)
  cold_share_run.execute(root/'distribution',root/'cold',paths['cold_rules']);cuts['cold']=stage(root,'cold',ps)
+ cold_legacy_stage.execute(root/'cold',root/'legacy_cold');cuts['legacy_cold']=stage(root,'legacy_cold',ps)
  declared_availability_run.execute(root/'distribution',root/'availability',paths['availability_definition'],hashes['availability_definition'],paths['availability_scope']);cuts['availability']=stage(root,'availability',ps)
  declared_pop_run.execute(q['ps_runtime'],root/'pop',paths['pop_scope'],paths['pop_definition'],hashes['pop_definition']);cuts['pop']=stage(root,'pop',ps)
  cold_conversion_run.execute(root/'distribution',root/'cold',root/'conversion',paths['conversion_scope'],paths['conversion_definition'],hashes['conversion_definition']);cuts['conversion']=stage(root,'conversion',ps)

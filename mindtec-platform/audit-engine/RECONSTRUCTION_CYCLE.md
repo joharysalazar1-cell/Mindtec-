@@ -2,7 +2,7 @@
 
 `reconstruction_cycle.py` chains existing reconstruction runners against one observer-accepted Perfect Store execution. `reconstruction_watch.py` polls that accepted local source. Neither module downloads external data, sends messages, uploads evidence or publishes a Site.
 
-Eight stages are retained: declared numeric distribution, shelf share, cold share, company availability reference, POP, cold conversion, weighted-input readiness, and the integrated projection. These are processing stages, not eight completed official KPI. Weighted distribution remains pending when official weighting rules are missing.
+Nine stages are retained: declared numeric distribution, shelf share, category cold share, the separately scoped legacy global cold reference, company availability reference, POP, cold conversion, weighted-input readiness, and the integrated projection. These are processing stages, not nine completed official KPI. Weighted distribution remains pending when official weighting rules are missing.
 
 ## Profile
 
@@ -62,3 +62,7 @@ A supervisor job of kind `reconstruction` requires absolute `profile`, `runtime`
 The supervisor launches only the fixed `reconstruction_watch.py` script with profile and interval. It waits for fresh, owned Perfect Store health with verified custody before first launch. A stale or borrowed health file does not authorize a launch, and health never authorizes killing a process. Exited children restart through the supervisor's owned process handles and backoff. A running but degraded child is not killed merely because its calculation takes time or its rules require attention.
 
 The supervisor health projection includes cycle state, custody verification, completed stages and report path, with `network_delivery: false`. After changing shared loaded code, stop and restart all affected observers in a controlled release; preserve the last accepted snapshots and existing scheduled-task definition. Startup/recovery is limited to the machine and session conditions of that configured task; this is not an always-on external service.
+
+## Legacy global cold reference
+
+Since reconstruction-cycle/1.1.0, `cold_legacy_stage.py` derives a separate reference from the retained category-cold source and its exact detailed workbook. Each used cell and header is checked against the original; the accepted reference retains both sources, execution evidence and the calculation bundle. The stage binds to the same Perfect Store run and snapshot as every other stage. Its standalone verifier recomputes the result. No category attribution, annual comparison or external publication is inferred. An input with no legacy visits yields no invented reference rows.

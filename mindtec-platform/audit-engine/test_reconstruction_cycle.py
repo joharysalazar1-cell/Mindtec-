@@ -42,7 +42,7 @@ class Tests(unittest.TestCase):
   changed=copy.deepcopy(self.ps);changed['meta']['run_id']='new-ps'
   with ExitStack() as stack:
    stack.enter_context(patch.object(cycle.projection,'captured',side_effect=[self.ps,changed]));stack.enter_context(patch.object(cycle,'stage',return_value={}))
-   for module in [cycle.numeric_distribution_run,cycle.shelf_share_run,cycle.cold_share_run,cycle.declared_availability_run,cycle.declared_pop_run,cycle.cold_conversion_run,cycle.weighted_inputs_run,cycle.projection]:stack.enter_context(patch.object(module,'execute'))
+   for module in [cycle.numeric_distribution_run,cycle.shelf_share_run,cycle.cold_share_run,cycle.cold_legacy_stage,cycle.declared_availability_run,cycle.declared_pop_run,cycle.cold_conversion_run,cycle.weighted_inputs_run,cycle.projection]:stack.enter_context(patch.object(module,'execute'))
    with self.assertRaisesRegex(ValueError,'acceptance changed'):cycle.execute(self.path)
   self.assertFalse((self.root/'cycle/audit.sqlite').exists());self.assertFalse((self.root/'reports').exists())
  def test_unchanged_context_reuses_verified_acceptance(self):
