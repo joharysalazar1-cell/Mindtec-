@@ -1,0 +1,73 @@
+# SKU binding and dated catalog audit
+
+These local, read-only tools identify discrepancies between normalized brand rows,
+SKU codes and a dated catalog. They do not correct responses, exclude surveys,
+establish fraud, or certify physical stock or historical core-SKU compliance.
+
+`sku_binding_audit.py` retains a workbook and an explicitly observed current client
+configuration. It flags unequal code/label counts and literal cross-brand prefixes.
+It never pairs unequal lists positionally. Its configuration schema is
+`mindtec-observed-client-core-configuration/1`; each client has a distinct `id`, a
+`core_skus` string list and optional `name`. A name seen in an export is not proof
+of physical presence. Historical applicability remains unestablished.
+
+`sku_catalog_contrast.py` checks each occurrence against the dated CSV catalog.
+Required semicolon-separated columns are `Código en Kobo`, `Marca` and
+`Valor del catálogo`. Missing codes, ambiguous codes, missing brand evidence,
+different brands and matching brands are separate states. Counts refer to code
+occurrences, not unique products, visits or people. Monthly counts require valid
+explicit YYYY-MM values. Current catalog matches do not certify historical labels.
+
+Run from the engine directory, with explicitly selected local inputs:
+
+```powershell
+python sku_catalog_run.py --workbook private/input/results.xlsx --catalog private/input/catalog.csv --output private/sku-review/new-cut
+python sku_catalog_run.py --verify private/sku-review/new-cut
+```
+
+The output directory must not exist. Originals, calculation code, dependencies,
+result and a SHA-256 manifest are retained. Verification checks exact file bytes,
+requires the retained implementation to match the verifier, and recomputes the
+result from the retained originals. It rejects incomplete manifests and modified
+results even when their individual hashes were updated. This is local integrity
+and reproducibility evidence; it is not a digital signature or independent proof
+that an original source was authentic.
+
+An optional periodic observer can watch two explicitly selected local files:
+
+```powershell
+python sku_catalog_watch.py --workbook private/input/results.xlsx --catalog private/input/catalog.csv --runtime private/sku-observer --interval 60
+```
+
+Use `--iterations 2` for a bounded two-poll check. Poll intervals are 60–3600
+seconds. The observer uses an OS-held exclusive lock, binds its custody directory
+to the selected paths, and retains a separate execution for each input/code
+context. Unchanged input is verified and reused. Invalid new input leaves the
+accepted pointer unchanged. Modified prior evidence, pointer summaries, runtime
+bindings or implementation cause a degraded status. A bounded observer reports
+`stopped` after exiting, even if its final poll was healthy. Do not interpret a
+health file as proof that a process is still alive.
+
+The supervisor supports a `sku_catalog` job with absolute `workbook`, `catalog`
+and `runtime` paths and an `interval` of at least 60 seconds. The fixed command is
+`sku_catalog_watch.py`; it does not supply a bounded iteration count. SKU custody
+must not overlap another job's custody, and its inputs must be outside every
+supervised custody directory. Health exposes the retained context hash and
+custody status while preserving the supervisor's owned-process restart behavior.
+
+It performs no network access or automatic publishing. A historical correction requires the original
+form/version choice list and an explicit version-to-submission correspondence.
+Keep original code and label alongside any reviewed correspondence.
+
+Tests:
+
+```powershell
+python -m unittest test_sku_binding_audit test_sku_catalog_contrast test_sku_catalog_run -v
+python -m unittest test_sku_catalog_watch -v
+```
+
+## Observer code across restarts
+
+Each observed run also retains `observer-code.json`, containing the exact observer and supervisor dependency bytes with hashes. Restart validation uses the retained code hashes for the previous context, rather than incorrectly substituting the currently loaded supervisor version. The calculation inputs and result still pass the catalogue runner replay verifier. A new observer version creates its own context and preserves the previous context. Observer bundles are written atomically before promoting the accepted pointer, and altered bundles are rejected.
+
+Legacy contexts without this code bundle require an explicit recovery from preserved source bytes. Recovery must reproduce the original context hash exactly and leave the original source files, calculation manifest, result and accepted pointer unchanged. Missing code evidence must not be replaced with the new implementation by assumption. Changes to the calculation kernel itself still require a separately validated compatibility or migration procedure.

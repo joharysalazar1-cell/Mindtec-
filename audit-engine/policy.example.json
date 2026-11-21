@@ -1,0 +1,6 @@
+{
+  "schema": "mindtec-audit-policy/1",
+  "version": "1.0.0",
+  "exclusions": [],
+  "max_source_bytes": 60000000
+}
