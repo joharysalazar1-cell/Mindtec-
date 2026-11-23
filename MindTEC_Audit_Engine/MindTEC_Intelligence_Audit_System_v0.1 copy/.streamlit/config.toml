@@ -1,0 +1,11 @@
+[theme]
+base = "light"
+primaryColor = "#4267ca"
+backgroundColor = "#f0f3f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#20324e"
+font = "sans serif"
+
+[server]
+# Keeps private local reports off the LAN; use an authenticated deployment for sharing.
+address = "127.0.0.1"

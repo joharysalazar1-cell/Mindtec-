@@ -1,0 +1,31 @@
+name: MindTEC Streamlit visual dashboard
+
+on:
+  pull_request:
+    paths:
+      - "MindTEC_Audit_Engine/**"
+      - ".github/workflows/mindtec-visual-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  streamlit-visual:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "MindTEC_Audit_Engine/MindTEC_Intelligence_Audit_System_v0.1 copy"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install UI smoke test dependencies
+        run: python -m pip install "streamlit>=1.40,<2" "pandas>=2.2" "numpy>=1.26"
+      - name: Check Python syntax
+        run: python -m compileall -q app.py src/ui
+      - name: Exercise home and executive pages
+        run: python -m unittest discover -s tests -p "test_visual_dashboard.py" -v
+      - name: Validate 12 KPI matrix importer
+        run: python -m unittest discover -s tests -p "test_kpi_reconstruction.py" -v

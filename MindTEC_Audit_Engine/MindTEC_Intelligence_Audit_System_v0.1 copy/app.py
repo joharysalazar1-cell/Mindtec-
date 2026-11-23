@@ -2,11 +2,22 @@ import importlib.util
 from pathlib import Path
 import streamlit as st
 from src.services.auto_sources import synchronize
+from src.ui.report_view import render_report
+from src.ui.dashboard import (
+    apply_visual_theme,
+    sidebar_brand,
+    topbar,
+    render_home,
+    render_executive,
+    render_html_snapshot,
+)
 
-st.set_page_config(page_title='MindTEC Intelligence System',page_icon='📊',layout='wide')
+st.set_page_config(page_title='MindTEC · Intelligence & Data Audit',page_icon='📊',layout='wide',initial_sidebar_state='expanded')
+apply_visual_theme()
 ROOT=Path(__file__).resolve().parent
 PAGES={
     'Fuentes automáticas':('11_connections.py','render'),
+    'Reconstrucción integral KPI':('12_kpi_reconstruction.py','render'),
     'Cargar bases de datos':('01_data_upload.py','pagina_recepcion_datos'),
     'Auditoría de la base':('10_audit_workspace.py','audit'),
     'Contraste de fuentes':('10_audit_workspace.py','contrast'),
@@ -47,7 +58,6 @@ def demo_sources():
         records[hashlib.sha256(content).hexdigest()]=dict(nombre=name,contenido=content,extension='csv',tamano=len(content),hojas=None,origen='demo')
 
 
-refresh_sources()
 demo_sources()
 
 def load_page(filename):
@@ -57,21 +67,36 @@ def load_page(filename):
     spec.loader.exec_module(module)
     return module
 
-st.sidebar.title('📊 MindTEC')
-st.sidebar.caption('Demo sintética incluida para explorar sin cargar archivos. Las fuentes reales se identifican por su nombre y procedencia.')
-choice=st.sidebar.radio('Navegación',['Inicio']+list(PAGES))
-if choice=='Inicio':
-    st.title('MindTEC · Auditoría y análisis independiente')
-    st.caption('Fuentes → integridad → indicadores → contraste → hallazgos')
-    st.info('Carga tus bases y referencias en Cargar bases de datos. Luego revisa su integridad, calcula indicadores con denominador explícito y contrasta fuentes equivalentes.')
-    st.markdown('1. **Auditoría de la base:** claves, faltantes y duplicados.\n2. **Indicadores verificables:** presencia, caras o quiebres con base explícita.\n3. **Contraste de fuentes:** dashboard, facturas, declaraciones o referencias externas.\n4. **Resultados y hallazgos:** evidencia, interpretación y resolución del analista.')
-    st.warning('Las fuentes originales no se modifican. Los resultados viven en la sesión: descarga el expediente para conservarlos. No confundas compra documentada con venta total o participación de mercado.')
+def navigate(target):
+    """Callbacks update navigation before the next Streamlit rerun."""
+    st.session_state["mindtec_nav"] = target
+
+
+sidebar_brand()
+with st.sidebar:
+    refresh_sources()
+choice=st.sidebar.radio('Navegación', ['Inicio', 'Dashboard ejecutivo', 'Informe para dirección', 'Dashboard HTML original'] + list(PAGES), key='mindtec_nav')
+st.sidebar.markdown(
+    '<div class="mt-sidebar-foot">FUENTE → VALIDACIÓN → INDICADORES → HALLAZGOS'
+    '<br>Los datos reales se manejan solo en el entorno autorizado.</div>',
+    unsafe_allow_html=True,
+)
+topbar()
+
+if choice == 'Inicio':
+    render_home(navigate)
+elif choice == 'Dashboard ejecutivo':
+    render_executive(navigate)
+elif choice == 'Informe para dirección':
+    render_report(navigate)
+elif choice == 'Dashboard HTML original':
+    render_html_snapshot()
 else:
-    filename,method=PAGES[choice]
+    filename, method = PAGES[choice]
     try:
-        page=load_page(filename)
+        page = load_page(filename)
         if method is not None:
-            getattr(page,method)()
-    except Exception as exc:
-        st.error(f'Error en el módulo «{choice}»: {exc}')
-        st.exception(exc)
+            getattr(page, method)()
+    except Exception:
+        # Do not display exception details or private source paths in the UI.
+        st.error(f'No se pudo abrir el módulo «{choice}». Revisa la terminal local.')
