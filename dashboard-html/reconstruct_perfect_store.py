@@ -10,9 +10,18 @@ parser.add_argument('--downloads-dir',type=Path,default=Path.home()/'Downloads')
 parser.add_argument('--start-month',help='Primer mes incluido, YYYY-MM (opcional)')
 parser.add_argument('--end-month',help='Último mes incluido, YYYY-MM (opcional)')
 parser.add_argument('--api',action='store_true',help='Leer cuestionarios normalizados desde API HTTPS en vez del JSON local')
+parser.add_argument('--cut-id',default='2026-11-13',help='Identificador del corte YYYY-MM-DD para carpeta de salida (predeterminado: histórico)')
+parser.add_argument('--expected-visits',type=int,help='Conteo esperado de visitas incluidas, comprobación opcional de cobertura')
 args=parser.parse_args()
 ROOT = args.data_dir.resolve()
-OUT = ROOT / 'Perfect_Store_reconstruido_2026-11-13'
+from datetime import date, datetime, timezone
+try:
+    cut_id = date.fromisoformat(args.cut_id).isoformat()
+except ValueError:
+    parser.error('--cut-id debe tener formato YYYY-MM-DD válido')
+if args.expected_visits is not None and args.expected_visits < 1:
+    parser.error('--expected-visits debe ser positivo')
+OUT = ROOT / f'Perfect_Store_reconstruido_{cut_id}'
 OUT.mkdir(exist_ok=True)
 DOWNLOADS = args.downloads_dir.resolve()
 def read(p): return json.loads(Path(p).read_text(encoding='utf-8-sig'))
@@ -33,6 +42,8 @@ excluded={r['id']:r for r in prior['exclusiones_coincidentes_con_auditoria_previ
 visits, months = select_visits(raw['envios'], excluded, args.start_month, args.end_month)
 # Actual observed months define the cut; no fixed expected row count or hidden zero rows.
 print('Meses incluidos:', ', '.join(months), '| visitas:', len(visits))
+if args.expected_visits is not None and len(visits) != args.expected_visits:
+    raise ValueError(f'Conteo real {len(visits)} distinto del esperado {args.expected_visits}. Revisar cobertura.')
 vmap={str(e['envioKobo']):e for e in visits}
 company_alias={'dbbsalvietti':'salvietti_ddb','salvietti':'salvietti_ddb','salviettiddb':'salvietti_ddb','vemassaalimentosybebidass a':'vemassa','pilandina':'pil_andina'}
 def company_code(v):
@@ -227,7 +238,7 @@ for (mo,cat,brand),rows in sorted(groups.items()):
     published=live.get((mo,norm(brand))) if cat=='gaseosas' else None
     summary.append(dict(mes=mo,categoria=cat,marca=brand,empresa=rows[0]['empresa'],tiendas=len(rows),elegibilidad_pendiente=unknown,tiendas_calculadas=len(vals),resultado=result,promedio_parcial=statistics.mean(vals) if vals else None,minimo=statistics.mean(r['minimo'] for r in rows if r['minimo'] is not None) if not unknown else None,maximo=statistics.mean(r['maximo'] for r in rows if r['maximo'] is not None) if not unknown else None,componentes=counts,publicado_actual=published,publicado_historico=historical.get((mo,norm(cat),norm(brand))),diferencia_publicado_menos_reconstruido=published-result if published is not None and result is not None else None,alcance='Reconstrucción operativa; aplicación retrospectiva de reglas/configuración actuales. No certifica versión histórica oficial.'))
 dump('detalle_por_tienda.json',details);dump('resumen_por_marca_mes.json',summary)
-dump('reglas_y_fuentes.json',dict(version='PS-OPER-2026-11-13.1',generado=raw['generado'],formula_tienda='100 × suma de cumplimientos / número de componentes aplicables medidos; si hay pendientes, resultado completo no disponible y se muestran límites.',formula_marca='Media aritmética de puntajes de tiendas elegibles, sin ponderar por compras o superficie. No promedio de porcentajes agregados de componentes.',pesos='1 por componente aplicable; reconstrucción de la regla visible, sin exportación del motor ni versión histórica certificada.',exclusiones=list(excluded.values()),etiquetas_equivalentes=aliases,empresa_por_marca=company_by_brand,configuracion_clientes=configs,publicados_actuales=livevals,orden_publicados=rankbrands,observaciones=published_cut.get('observaciones',[])))
+dump('reglas_y_fuentes.json',dict(version='PS-OPER-2026-11-13.1',generado=raw.get('generado','No informado por la fuente'),formula_tienda='100 × suma de cumplimientos / número de componentes aplicables medidos; si hay pendientes, resultado completo no disponible y se muestran límites.',formula_marca='Media aritmética de puntajes de tiendas elegibles, sin ponderar por compras o superficie. No promedio de porcentajes agregados de componentes.',pesos='1 por componente aplicable; reconstrucción de la regla visible, sin exportación del motor ni versión histórica certificada.',exclusiones=list(excluded.values()),etiquetas_equivalentes=aliases,empresa_por_marca=company_by_brand,configuracion_clientes=configs,publicados_actuales=livevals,orden_publicados=rankbrands,observaciones=published_cut.get('observaciones',[])))
 for name,rows in [('resumen_por_marca_mes.csv',summary),('detalle_por_tienda.csv',details)]:
     flat=[]
     for r in rows:
@@ -243,7 +254,7 @@ for p in candidate_sources:
     if not p.is_file():
         continue
     shutil.copy2(p,OUT/p.name);sources.append(dict(archivo=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest()))
-dump('manifiesto.json',dict(corte='2026-11-13',tipo_fuente='API JSON normalizada' if args.api else 'Archivo JSON normalizado',periodos_seleccionados=months,periodo_inicio=args.start_month,periodo_fin=args.end_month,exportados=len(raw['envios']),incluidos=len(visits),meses=dict(collections.Counter(e['fechaVisita'][:7] for e in visits)),cubos_sin_export=missing_cubes,limitaciones=['Sin cubos EMBol para algunos meses: revisar cobertura de homologación.'] if missing_cubes else [],marcas=len(set(r['marca'] for r in summary)),combinaciones_marca_categoria_mes=len(summary),filas_tienda=len(details),resultados_completos=sum(r['resultado'] is not None for r in summary),fuentes=sources))
+dump('manifiesto.json',dict(corte=cut_id,fuente_sha256=hashlib.sha256(json.dumps(raw,sort_keys=True,ensure_ascii=False).encode('utf-8')).hexdigest(),captura_utc=datetime.now(timezone.utc).isoformat(),tipo_fuente='API JSON normalizada' if args.api else 'Archivo JSON normalizado',periodos_seleccionados=months,periodo_inicio=args.start_month,periodo_fin=args.end_month,exportados=len(raw['envios']),incluidos=len(visits),meses=dict(collections.Counter(e['fechaVisita'][:7] for e in visits)),cubos_sin_export=missing_cubes,limitaciones=['Sin cubos EMBol para algunos meses: revisar cobertura de homologación.'] if missing_cubes else [],marcas=len(set(r['marca'] for r in summary)),combinaciones_marca_categoria_mes=len(summary),filas_tienda=len(details),resultados_completos=sum(r['resultado'] is not None for r in summary),fuentes=sources))
 for r in summary:
     if r['marca'] in ('7up','Coca-Cola') and r['categoria']=='gaseosas': print(json.dumps(r,ensure_ascii=False))
 print('Results',len(summary),'details',len(details),'complete',sum(r['resultado'] is not None for r in summary))
