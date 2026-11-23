@@ -8,6 +8,7 @@ from src.ui.dashboard import (
     topbar,
     render_home,
     render_executive,
+    render_html_snapshot,
 )
 
 st.set_page_config(page_title='MindTEC · Intelligence & Data Audit',page_icon='📊',layout='wide',initial_sidebar_state='expanded')
@@ -72,7 +73,7 @@ def navigate(target):
 sidebar_brand()
 with st.sidebar:
     refresh_sources()
-choice=st.sidebar.radio('Navegación', ['Inicio', 'Dashboard ejecutivo'] + list(PAGES), key='mindtec_nav')
+choice=st.sidebar.radio('Navegación', ['Inicio', 'Dashboard ejecutivo', 'Dashboard HTML original'] + list(PAGES), key='mindtec_nav')
 st.sidebar.markdown(
     '<div class="mt-sidebar-foot">FUENTE → VALIDACIÓN → INDICADORES → HALLAZGOS'
     '<br>Los datos reales se manejan solo en el entorno autorizado.</div>',
@@ -84,6 +85,8 @@ if choice == 'Inicio':
     render_home(navigate)
 elif choice == 'Dashboard ejecutivo':
     render_executive(navigate)
+elif choice == 'Dashboard HTML original':
+    render_html_snapshot()
 else:
     filename, method = PAGES[choice]
     try:
@@ -91,6 +94,5 @@ else:
         if method is not None:
             getattr(page, method)()
     except Exception:
-        st.error(f'No se pudo abrir el módulo «{choice}». Comprueba los registros del servidor.')
-        # Avoid showing raw exceptions or paths in the public-facing UI.
-        raise
+        # Do not display exception details or private source paths in the UI.
+        st.error(f'No se pudo abrir el módulo «{choice}». Revisa la terminal local.')
