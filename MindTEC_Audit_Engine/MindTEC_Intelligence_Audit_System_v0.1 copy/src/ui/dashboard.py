@@ -291,3 +291,73 @@ def render_executive(navigate) -> None:
         "Para una conciliación oficial, carga los dos cortes y confirma "
         "la equivalencia de periodo, unidad, fórmula y universo."
     )
+
+
+def render_html_snapshot() -> None:
+    """Read only trusted, locally generated HTML snapshots; never upload to GitHub."""
+    _hero(
+        "DASHBOARD ORIGINAL · VISUALIZACIÓN LOCAL",
+        "Dashboard HTML y trazabilidad.",
+        "Esta vista abre un informe HTML generado en este equipo. "
+        "Es una fotografía del corte: no descarga datos nuevos, no alimenta "
+        "automáticamente los módulos Streamlit y no certifica las cifras.",
+        compact=True,
+    )
+    repo_root = Path(__file__).resolve().parents[4]
+    candidates = {
+        "Dashboard de auditoría y trazabilidad":
+            repo_root / "dashboard-html" / "dist"
+            / "MindTEC_Dashboard_con_auditoria_y_trazabilidad.html",
+        "Informe completo local":
+            repo_root / "INFORME_MINDTEC_COMPLETO.html",
+    }
+    available = {name: path for name, path in candidates.items() if path.is_file()}
+    if not available:
+        st.info(
+            "No se encontró un HTML ejecutivo local. El archivo construido "
+            "se busca en dashboard-html/dist/MindTEC_Dashboard_con_auditoria_y_trazabilidad.html. "
+            "También se reconoce INFORME_MINDTEC_COMPLETO.html en la raíz del repositorio."
+        )
+        st.caption(
+            "El dashboard HTML privado debe generarse localmente con "
+            "dashboard-html/build.py y sus fuentes autorizadas. Nunca lo publiques "
+            "en el repositorio ni en GitHub Pages."
+        )
+        return
+
+    selected = st.selectbox("Corte local para visualizar", list(available))
+    path = available[selected]
+    st.caption(
+        f"Archivo local: {path.name} · {path.stat().st_size / 1024 / 1024:.1f} MB. "
+        "Su fecha y cobertura deben confirmarse con el manifiesto del corte."
+    )
+    st.warning(
+        "Este reporte puede contener respuestas, facturas, IDs de visita y "
+        "otros datos privados incrustados. Úsalo únicamente en un servidor "
+        "local, sin acceso de red externo, y abre solo HTML que hayas "
+        "generado o revisado tú."
+    )
+    enabled = st.checkbox(
+        "Confirmo que este HTML es de confianza y la sesión está restringida al equipo local."
+    )
+    if not enabled:
+        st.info("Confirma lo anterior para habilitar la vista HTML completa.")
+        return
+    size = path.stat().st_size
+    if size > 60 * 1024 * 1024:
+        st.error(
+            "El HTML supera 60 MB. Para evitar fallos del navegador, "
+            "abre la copia local fuera de Streamlit o genera un corte menor."
+        )
+        return
+    try:
+        html = path.read_text(encoding="utf-8-sig")
+    except (UnicodeDecodeError, OSError):
+        st.error("No fue posible abrir el HTML local. Comprueba la codificación y los permisos.")
+        return
+    st.components.v1.html(html, height=1050, scrolling=True)
+    st.caption(
+        "Los filtros de este HTML funcionan dentro de la vista, pero no "
+        "actualizan las fuentes de la sesión Streamlit. Para comparar KPI "
+        "oficiales utiliza el módulo Contraste de fuentes."
+    )
