@@ -1,10 +1,15 @@
 """Rebuild store-level Perfect Store from Scan exports; preserve rule uncertainty."""
 from pathlib import Path
 import argparse,collections, csv, hashlib, html, json, re, shutil, statistics, unicodedata
+from period_utils import select_visits
+from api_questionnaires import fetch_normalized_export
 
 parser=argparse.ArgumentParser(description='Reconstruct a private Scan Perfect Store cut; never publish outputs.')
 parser.add_argument('--data-dir',type=Path,default=Path(__file__).resolve().parent)
 parser.add_argument('--downloads-dir',type=Path,default=Path.home()/'Downloads')
+parser.add_argument('--start-month',help='Primer mes incluido, YYYY-MM (opcional)')
+parser.add_argument('--end-month',help='Último mes incluido, YYYY-MM (opcional)')
+parser.add_argument('--api',action='store_true',help='Leer cuestionarios normalizados desde API HTTPS en vez del JSON local')
 args=parser.parse_args()
 ROOT = args.data_dir.resolve()
 OUT = ROOT / 'Perfect_Store_reconstruido_2026-11-13'
@@ -18,15 +23,16 @@ def num(v):
     except (ValueError,TypeError): return None
 def dump(name,obj): (OUT/name).write_text(json.dumps(obj,ensure_ascii=False,indent=2),encoding='utf-8')
 rawpath=DOWNLOADS/'cuestionarios_normalizados_2026-11-13.json'
-raw=read(rawpath)
+raw=fetch_normalized_export() if args.api else read(rawpath)
 from scan_xlsx import read_scan_xlsx
 x=read_scan_xlsx(DOWNLOADS/'resultado_final_2026-11-13.xlsx')
 brandsheet=next(v for k,v in x.items() if 'marcas' in k)
 configs=read(ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json')['clientes']
 prior=read(ROOT/'Colecta_descargada_2026-11-12/conciliacion_y_alcance.json')
 excluded={r['id']:r for r in prior['exclusiones_coincidentes_con_auditoria_previa']}
-visits=[e for e in raw['envios'] if str(e['envioKobo']) not in excluded]
-assert len(visits)==108 and len({(e['fechaVisita'][:7],e['codigoTienda']) for e in visits})==108
+visits, months = select_visits(raw['envios'], excluded, args.start_month, args.end_month)
+# Actual observed months define the cut; no fixed expected row count or hidden zero rows.
+print('Meses incluidos:', ', '.join(months), '| visitas:', len(visits))
 vmap={str(e['envioKobo']):e for e in visits}
 company_alias={'dbbsalvietti':'salvietti_ddb','salvietti':'salvietti_ddb','salviettiddb':'salvietti_ddb','vemassaalimentosybebidass a':'vemassa','pilandina':'pil_andina'}
 def company_code(v):
@@ -35,8 +41,12 @@ def company_code(v):
     return company_alias.get(n,n)
 company_by_brand={}
 cube=[]
-for mo in ['2026-09','2026-10']:
+missing_cubes=[]
+for mo in months:
     p=DOWNLOADS/f'cubo_embol_{mo}.csv'
+    if not p.exists():
+        missing_cubes.append(mo)
+        continue
     rows=list(csv.DictReader(p.open(encoding='utf-8-sig',newline='')))
     cube+=rows
     for r in rows:
@@ -228,9 +238,14 @@ for name,rows in [('resumen_por_marca_mes.csv',summary),('detalle_por_tienda.csv
     with (OUT/name).open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=list(dict.fromkeys(k for r in flat for k in r)));w.writeheader();w.writerows(flat)
 sources=[]
-for p in [rawpath,DOWNLOADS/'resultado_final_2026-11-13.xlsx',DOWNLOADS/'cubo_embol_2026-09.csv',DOWNLOADS/'cubo_embol_2026-10.csv',DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html',ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json']:
+candidate_sources=([rawpath] if not args.api else [])+[DOWNLOADS/'resultado_final_2026-11-13.xlsx']+[DOWNLOADS/f'cubo_embol_{mo}.csv' for mo in months]+[DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html',ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json']
+for p in candidate_sources:
+    if not p.is_file():
+        continue
     shutil.copy2(p,OUT/p.name);sources.append(dict(archivo=p.name,sha256=hashlib.sha256(p.read_bytes()).hexdigest()))
-dump('manifiesto.json',dict(corte='2026-11-13',exportados=112,incluidos=108,meses=collections.Counter(e['fechaVisita'][:7] for e in visits),marcas=len(set(r['marca'] for r in summary)),combinaciones_marca_categoria_mes=len(summary),filas_tienda=len(details),resultados_completos=sum(r['resultado'] is not None for r in summary),fuentes=sources))
+dump('manifiesto.json',dict(corte='2026-11-13',tipo_fuente='API JSON normalizada' if args.api else 'Archivo JSON normalizado',periodos_seleccionados=months,periodo_inicio=args.start_month,periodo_fin=args.end_month,exportados=len(raw['envios']),incluidos=len(visits),meses=dict(collections.Counter(e['fechaVisita'][:7] for e in visits)),cubos_sin_export=missing_cubes,limitaciones=['Sin cubos EMBol para algunos meses: revisar cobertura de homologación.'] if missing_cubes else [],marcas=len(set(r['marca'] for r in summary)),combinaciones_marca_categoria_mes=len(summary),filas_tienda=len(details),resultados_completos=sum(r['resultado'] is not None for r in summary),fuentes=sources))
 for r in summary:
     if r['marca'] in ('7up','Coca-Cola') and r['categoria']=='gaseosas': print(json.dumps(r,ensure_ascii=False))
 print('Results',len(summary),'details',len(details),'complete',sum(r['resultado'] is not None for r in summary))
+if missing_cubes:
+    print('ADVERTENCIA: faltan cubos de referencia para:', ', '.join(missing_cubes))
