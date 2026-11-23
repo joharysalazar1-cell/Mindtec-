@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import streamlit as st
 from src.services.auto_sources import synchronize
+from src.ui.report_view import render_report
 from src.ui.dashboard import (
     apply_visual_theme,
     sidebar_brand,
@@ -73,7 +74,7 @@ def navigate(target):
 sidebar_brand()
 with st.sidebar:
     refresh_sources()
-choice=st.sidebar.radio('Navegación', ['Inicio', 'Dashboard ejecutivo', 'Dashboard HTML original'] + list(PAGES), key='mindtec_nav')
+choice=st.sidebar.radio('Navegación', ['Inicio', 'Dashboard ejecutivo', 'Informe para dirección', 'Dashboard HTML original'] + list(PAGES), key='mindtec_nav')
 st.sidebar.markdown(
     '<div class="mt-sidebar-foot">FUENTE → VALIDACIÓN → INDICADORES → HALLAZGOS'
     '<br>Los datos reales se manejan solo en el entorno autorizado.</div>',
@@ -85,6 +86,8 @@ if choice == 'Inicio':
     render_home(navigate)
 elif choice == 'Dashboard ejecutivo':
     render_executive(navigate)
+elif choice == 'Informe para dirección':
+    render_report(navigate)
 elif choice == 'Dashboard HTML original':
     render_html_snapshot()
 else:
