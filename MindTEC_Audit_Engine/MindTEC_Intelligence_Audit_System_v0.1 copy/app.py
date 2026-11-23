@@ -17,6 +17,7 @@ apply_visual_theme()
 ROOT=Path(__file__).resolve().parent
 PAGES={
     'Fuentes automáticas':('11_connections.py','render'),
+    'Reconstrucción integral KPI':('12_kpi_reconstruction.py','render'),
     'Cargar bases de datos':('01_data_upload.py','pagina_recepcion_datos'),
     'Auditoría de la base':('10_audit_workspace.py','audit'),
     'Contraste de fuentes':('10_audit_workspace.py','contrast'),
