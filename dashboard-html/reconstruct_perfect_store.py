@@ -10,6 +10,8 @@ parser.add_argument('--downloads-dir',type=Path,default=Path.home()/'Downloads')
 parser.add_argument('--start-month',help='Primer mes incluido, YYYY-MM (opcional)')
 parser.add_argument('--end-month',help='Último mes incluido, YYYY-MM (opcional)')
 parser.add_argument('--api',action='store_true',help='Leer cuestionarios normalizados desde API HTTPS en vez del JSON local')
+parser.add_argument('--questionnaires-json',type=Path,help='Ruta a JSON local normalizado, alternativa al archivo histórico')
+parser.add_argument('--published-capture',type=Path,help='Captura de comparación oficial para el corte nuevo, opcional')
 parser.add_argument('--cut-id',default='2026-11-13',help='Identificador del corte YYYY-MM-DD para carpeta de salida (predeterminado: histórico)')
 parser.add_argument('--expected-visits',type=int,help='Conteo esperado de visitas incluidas, comprobación opcional de cobertura')
 args=parser.parse_args()
@@ -31,7 +33,9 @@ def num(v):
     try: return float(str(v).replace(',','.'))
     except (ValueError,TypeError): return None
 def dump(name,obj): (OUT/name).write_text(json.dumps(obj,ensure_ascii=False,indent=2),encoding='utf-8')
-rawpath=DOWNLOADS/'cuestionarios_normalizados_2026-11-13.json'
+rawpath=(args.questionnaires_json or DOWNLOADS/'cuestionarios_normalizados_2026-11-13.json').resolve()
+if args.api and args.questionnaires_json:
+    parser.error('Selecciona --api o --questionnaires-json, no ambos')
 raw=fetch_normalized_export() if args.api else read(rawpath)
 from scan_xlsx import read_scan_xlsx
 x=read_scan_xlsx(DOWNLOADS/'resultado_final_2026-11-13.xlsx')
@@ -224,9 +228,12 @@ for r in details: groups[(r['mes'],r['categoria'],r['marca'])].append(r)
 historical={}
 for v in old['dashboardLive'].values():
     historical[(v['month'],norm(v['cat']),norm(v['brand']))]=v['values'][0]
-published_cut=read(OUT/'captura_panel_perfect_store.json')
-rankbrands=published_cut['rankbrands']
-livevals=published_cut['livevals']
+capture_path=(args.published_capture or OUT/'captura_panel_perfect_store.json').resolve()
+published_cut=read(capture_path) if capture_path.is_file() else {}
+rankbrands=published_cut.get('rankbrands',[])
+livevals=published_cut.get('livevals',{})
+if not isinstance(livevals,dict):
+    raise ValueError('Captura inválida: livevals debe ser un objeto mes -> valores.')
 live={(m,norm(b)):v for m,vs in livevals.items() for b,v in zip(rankbrands,vs)}
 summary=[]
 for (mo,cat,brand),rows in sorted(groups.items()):
@@ -249,7 +256,7 @@ for name,rows in [('resumen_por_marca_mes.csv',summary),('detalle_por_tienda.csv
     with (OUT/name).open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=list(dict.fromkeys(k for r in flat for k in r)));w.writeheader();w.writerows(flat)
 sources=[]
-candidate_sources=([rawpath] if not args.api else [])+[DOWNLOADS/'resultado_final_2026-11-13.xlsx']+[DOWNLOADS/f'cubo_embol_{mo}.csv' for mo in months]+[DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html',ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json']
+candidate_sources=([rawpath] if not args.api else [])+([capture_path] if capture_path.is_file() else [])+[DOWNLOADS/'resultado_final_2026-11-13.xlsx']+[DOWNLOADS/f'cubo_embol_{mo}.csv' for mo in months]+[DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html',ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json']
 for p in candidate_sources:
     if not p.is_file():
         continue
