@@ -12,6 +12,11 @@ parser.add_argument('--end-month',help='Último mes incluido, YYYY-MM (opcional)
 parser.add_argument('--api',action='store_true',help='Leer cuestionarios normalizados desde API HTTPS en vez del JSON local')
 parser.add_argument('--questionnaires-json',type=Path,help='Ruta a JSON local normalizado, alternativa al archivo histórico')
 parser.add_argument('--published-capture',type=Path,help='Captura de comparación oficial para el corte nuevo, opcional')
+parser.add_argument('--scan-xlsx',type=Path,help='Excel de Scan correspondiente al nuevo corte')
+parser.add_argument('--config-json',type=Path,help='Configuración observada de marcas y SKU, JSON')
+parser.add_argument('--exclusions-json',type=Path,help='Conciliación y exclusiones aprobadas, JSON')
+parser.add_argument('--historical-html',type=Path,help='HTML de base histórica utilizado como referencia')
+parser.add_argument('--overwrite-cut',action='store_true',help='Permitir reemplazar resultados existentes del mismo corte')
 parser.add_argument('--cut-id',default='2026-11-13',help='Identificador del corte YYYY-MM-DD para carpeta de salida (predeterminado: histórico)')
 parser.add_argument('--expected-visits',type=int,help='Conteo esperado de visitas incluidas, comprobación opcional de cobertura')
 args=parser.parse_args()
@@ -24,7 +29,9 @@ except ValueError:
 if args.expected_visits is not None and args.expected_visits < 1:
     parser.error('--expected-visits debe ser positivo')
 OUT = ROOT / f'Perfect_Store_reconstruido_{cut_id}'
-OUT.mkdir(exist_ok=True)
+if (OUT/'manifiesto.json').exists() and not args.overwrite_cut:
+    parser.error('El corte ya existe. Usa otro --cut-id o --overwrite-cut de forma explícita.')
+OUT.mkdir(parents=True,exist_ok=True)
 DOWNLOADS = args.downloads_dir.resolve()
 def read(p): return json.loads(Path(p).read_text(encoding='utf-8-sig'))
 def norm(v): return re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', str(v or '')).encode('ascii','ignore').decode().lower())
@@ -38,10 +45,13 @@ if args.api and args.questionnaires_json:
     parser.error('Selecciona --api o --questionnaires-json, no ambos')
 raw=fetch_normalized_export() if args.api else read(rawpath)
 from scan_xlsx import read_scan_xlsx
-x=read_scan_xlsx(DOWNLOADS/'resultado_final_2026-11-13.xlsx')
+scan_path=(args.scan_xlsx or DOWNLOADS/'resultado_final_2026-11-13.xlsx').resolve()
+x=read_scan_xlsx(scan_path)
 brandsheet=next(v for k,v in x.items() if 'marcas' in k)
-configs=read(ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json')['clientes']
-prior=read(ROOT/'Colecta_descargada_2026-11-12/conciliacion_y_alcance.json')
+config_path=(args.config_json or ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json').resolve()
+exclusions_path=(args.exclusions_json or ROOT/'Colecta_descargada_2026-11-12/conciliacion_y_alcance.json').resolve()
+configs=read(config_path)['clientes']
+prior=read(exclusions_path)
 excluded={r['id']:r for r in prior['exclusiones_coincidentes_con_auditoria_previa']}
 visits, months = select_visits(raw['envios'], excluded, args.start_month, args.end_month)
 # Actual observed months define the cut; no fixed expected row count or hidden zero rows.
@@ -67,7 +77,8 @@ for mo in months:
     for r in rows:
         if r['marca'] and r['empresa'] and r['empresa']!='Otras / independientes':
             company_by_brand[norm(r['marca'])]=company_code(r['empresa'])
-h=(ROOT/'MindTEC_KPI_originales_restaurados.html').read_text(encoding='utf-8')
+historical_path=(args.historical_html or ROOT/'MindTEC_KPI_originales_restaurados.html').resolve()
+h=historical_path.read_text(encoding='utf-8')
 old=json.loads(re.search(r'<script id="data" type="application/json">(.*?)</script>',h,re.S)[1])
 for k in old['kpis']:
     if k[0] and k[0]!='Otras / independientes': company_by_brand.setdefault(norm(k[2]),company_code(k[0]))
@@ -256,7 +267,7 @@ for name,rows in [('resumen_por_marca_mes.csv',summary),('detalle_por_tienda.csv
     with (OUT/name).open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=list(dict.fromkeys(k for r in flat for k in r)));w.writeheader();w.writerows(flat)
 sources=[]
-candidate_sources=([rawpath] if not args.api else [])+([capture_path] if capture_path.is_file() else [])+[DOWNLOADS/'resultado_final_2026-11-13.xlsx']+[DOWNLOADS/f'cubo_embol_{mo}.csv' for mo in months]+[DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html',ROOT/'Configuracion_observada_MindTEC_2026-11-12/configuracion_clientes_observada.json']
+candidate_sources=([rawpath] if not args.api else [])+([capture_path] if capture_path.is_file() else [])+[scan_path,config_path,exclusions_path,historical_path]+[DOWNLOADS/f'cubo_embol_{mo}.csv' for mo in months]+[DOWNLOADS/'MindTEC-panel-CBN-Pepsi-2026-11-13.html',DOWNLOADS/'MindTEC-panel-EMBOL-Coca-Cola-2026-11-13.html']
 for p in candidate_sources:
     if not p.is_file():
         continue
