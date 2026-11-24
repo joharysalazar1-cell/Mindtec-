@@ -1,0 +1,13 @@
+/* Self-contained delivery: embeds the exact archived documents, loaded only on demand. */
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib');
+const root=path.resolve(__dirname,'../..'),dir='source/executive-cut-2026-11-19',source=fs.readFileSync(dir+'/report.html','utf8'),views=require('./conserved-views.cjs').views();
+const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+let html=source.replace(/(<script id="conserved-views-data" type="application\/json">)[\s\S]*?(<\/script>)/,(_,open,close)=>open+JSON.stringify(views).replace(/</g,'\\u003c')+close);
+html=html.replaceAll('href="/','href="https://mindtec-intelligence-audit.ablazemarch.chatgpt.site/');
+html=html.replace('<title>MindTEC · Informe de dirección y auditoría</title>','<title>MindTEC · Dashboard integrado con histórico y reconstrucciones</title>');
+const names=['MindTEC_Dashboard_integrado_completo_2026-11-24.html','MindTEC_Dashboard_con_auditoria_y_trazabilidad.html'];
+const packed=zlib.gzipSync(html,{level:9}).toString('base64');
+const delivery=`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MindTEC · Dashboard integrado completo</title><style>body{margin:0;padding:48px;font:18px/1.6 system-ui;color:#163955;background:#eff5f7}main{max-width:740px;margin:auto;background:white;border-radius:16px;padding:32px}h1{font-size:28px}</style></head><body><main><h1>MindTEC · Dashboard integrado</h1><p id="loading">Abriendo los indicadores, la trazabilidad y las cinco vistas conservadas… Los datos están incluidos en este archivo.</p></main><script id="integrated-packed" type="application/octet-stream">${packed}</script><script>(async()=>{try{const bytes=Uint8Array.from(atob(document.getElementById('integrated-packed').textContent),c=>c.charCodeAt(0));const text=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();document.open();document.write(text);document.close();}catch(error){document.getElementById('loading').textContent='No se pudo abrir: '+error.message+'. Utiliza una versión actual de Microsoft Edge o Chrome.';}})();</script></body></html>`;
+for(const name of names)fs.writeFileSync(path.join(root,name),delivery);
+fs.writeFileSync('source/integrated-local-2026-11-24.json',JSON.stringify({schema:'mindtec-integrated-local/1',date:'2026-11-24',filename:names[0],sha256:sha(delivery),unpacked_sha256:sha(html),bytes:Buffer.byteLength(delivery),current_report_sha256:sha(source),views:views.map(({payload,...metadata})=>metadata)},null,2));
+console.log(JSON.stringify({integrated_html:names[0],bytes:Buffer.byteLength(delivery),preserved_views:views.map(v=>v.key)}));

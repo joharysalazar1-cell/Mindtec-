@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{spawnSync}=require('node:child_process'),{summarize}=require('./comparison-statistics.cjs');
+const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-10,`${a} != ${b}`);
+const biased=summarize([{audit:1,panel:2},{audit:2,panel:3},{audit:3,panel:4}]);
+for(const key of ['bias','mae','rmse','varianceAudit','variancePanel','covariance'])close(biased[key],1);
+close(biased.varianceDifference,0);close(biased.pearson,1);close(biased.concordance,4/7);
+const symmetric=summarize([{audit:10,panel:9},{audit:20,panel:20},{audit:30,panel:31}]);
+close(symmetric.bias,0);close(symmetric.mae,2/3);close(symmetric.rmse,Math.sqrt(2/3));close(symmetric.varianceDifference,1);
+close(symmetric.varianceDifference,symmetric.varianceAudit+symmetric.variancePanel-2*symmetric.covariance);
+close(symmetric.rmseSquaredDecompositionError,0);
+assert.deepEqual(summarize([]),{n:0});assert.equal(summarize([{audit:0,panel:0}]).pearson,null);
+assert.equal(summarize([{audit:3,panel:3},{audit:3,panel:3},{audit:3,panel:3}]).pearson,null);
+assert.throws(()=>summarize([{audit:NaN,panel:0}]));
+let scripts=0;for(const name of fs.readdirSync(__dirname).filter(n=>/\.(js|cjs)$/.test(n))){new vm.Script(fs.readFileSync(path.join(__dirname,name),'utf8'),{filename:name});scripts++;}
+const navigation=fs.readFileSync(path.join(__dirname,'conserved-views.js'),'utf8');assert.ok(navigation.includes("crypto.subtle.digest('SHA-256',raw)"));assert.ok(navigation.includes('frames=new Map()'));assert.ok(navigation.includes('frame.srcdoc=html'));
+const check=spawnSync('python',['-c','import ast,pathlib,sys; files=list(pathlib.Path(sys.argv[1]).glob("*.py")); [ast.parse(p.read_text(encoding="utf-8"),filename=str(p)) for p in files]; print(len(files))',path.join(__dirname,'engine')],{encoding:'utf8'});assert.equal(check.status,0,check.stderr);
+console.log(JSON.stringify({synthetic_statistics_passed:true,perfect_correlation_is_not_agreement:true,variance_identity_verified:true,parsed_javascript_files:scripts,parsed_python_files:Number(check.stdout.trim()),private_data_required:false}));

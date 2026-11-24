@@ -1,0 +1,25 @@
+# Private inputs and generated deliveries are not distributed through GitHub.
+/source/
+/private/
+/dist/
+/reports/
+/runtime/
+/engine/private/
+/engine/runtime/
+__pycache__/
+*.pyc
+*.sqlite*
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.json
+*.jsonl
+*.html
+*.gz
+*.zip
+*.tar
+.env*
+.dev.vars*
+*.pem
+*.key
