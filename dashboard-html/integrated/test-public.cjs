@@ -12,5 +12,9 @@ assert.equal(summarize([{audit:3,panel:3},{audit:3,panel:3},{audit:3,panel:3}]).
 assert.throws(()=>summarize([{audit:NaN,panel:0}]));
 let scripts=0;for(const name of fs.readdirSync(__dirname).filter(n=>/\.(js|cjs)$/.test(n))){new vm.Script(fs.readFileSync(path.join(__dirname,name),'utf8'),{filename:name});scripts++;}
 const navigation=fs.readFileSync(path.join(__dirname,'conserved-views.js'),'utf8');assert.ok(navigation.includes("crypto.subtle.digest('SHA-256',raw)"));assert.ok(navigation.includes('frames=new Map()'));assert.ok(navigation.includes('frame.srcdoc=html'));
+const comparisonUI=fs.readFileSync(path.join(__dirname,'comparison-ui.js'),'utf8'),comparisonBuild=fs.readFileSync(path.join(__dirname,'build-kpi-comparison.cjs'),'utf8');
+assert.ok(comparisonUI.includes('r.comparable!==false'));assert.ok(comparisonBuild.includes('r.comparable!==false'));assert.ok(comparisonBuild.includes('row.comparable=false'));
+assert.ok(comparisonUI.includes('Sin valor publicado para comparar'));assert.ok(comparisonUI.includes('Universos no comparables'));assert.ok(comparisonBuild.includes('Object.hasOwn(fresh.values,metric)'));
+assert.ok(comparisonBuild.includes('freshMap.get(key(cats[cat],c.brand,s.period))'));
 const check=spawnSync('python',['-c','import ast,pathlib,sys; files=list(pathlib.Path(sys.argv[1]).glob("*.py")); [ast.parse(p.read_text(encoding="utf-8"),filename=str(p)) for p in files]; print(len(files))',path.join(__dirname,'engine')],{encoding:'utf8'});assert.equal(check.status,0,check.stderr);
 console.log(JSON.stringify({synthetic_statistics_passed:true,perfect_correlation_is_not_agreement:true,variance_identity_verified:true,parsed_javascript_files:scripts,parsed_python_files:Number(check.stdout.trim()),private_data_required:false}));

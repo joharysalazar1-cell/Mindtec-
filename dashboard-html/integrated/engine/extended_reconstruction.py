@@ -39,6 +39,10 @@ def build():
   o=json.loads(r['observation']);value=o.get('Precio Bs');volume=r['content'];unit=fold(r['unit']);litres=volume/1000 if unit=='ml' and volume else volume if unit in ('l','litro','litros') else None;category=CAT.get(r['canonical_category'])
   if category and litres and litres>0 and type(value) in (int,float) and value>0:
    price_rows.append({'source_row':r['source_row'],'kobo_id':r['kobo_id'],'month':r['month'],'category':category,'brand':r['canonical_brand'],'sku':r['canonical_label'],'litres':litres,'location':o['Dónde'],'bs_per_litre':value/litres,'price_bs':value,'reference':json.loads(r['reference_payload'])})
+ photo_products=ROOT.parent.parent/'mindtec-web/app-site/source/product-evidence-2026-11-24/result.json'
+ photo_excluded_prices=set()
+ if photo_products.exists():photo_excluded_prices={r['source_row'] for r in json.loads(photo_products.read_text(encoding='utf8')).get('excluded_photo_links',[]) if r['entity']=='prices'}
+ price_rows=[r for r in price_rows if r['source_row'] not in photo_excluded_prices]
  results=[]
  def add(s,metric,value=None,state='pending_inputs',**extra):
   c=p['catalogue'][s['c']];results.append({'period':s['period'],'kind':s['kind'],'category':p['categories'][c['category']],'brand':c['brand'],'brand_code':c['brand_code'],'metric':metric,'value':value,'state':state,**extra})

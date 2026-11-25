@@ -1,5 +1,15 @@
 # Dashboard integrado: código de la entrega revisada
 
+## Actualización del 25/11/2026
+
+- Exclusiones desde la columna «Se registró pero NO se ve» de la revisión fotográfica de octubre, enlazadas por sticker y mes. Se distinguen marca completa, producto nominal y presentación; se mantienen originales, exclusiones y huellas de origen.
+- Revisión explícita de repeticiones erróneas, recálculo de estante y agregados, y retirada de productos excluidos de las vistas activas y de las referencias de precio que los utilizaban. Una ausencia en fotografías de estante no elimina compras históricas ni caras frías.
+- Share en frío: valores por categoría y valores del panel con universo de enfriadores de bebidas no se mezclan en estadísticas de concordancia mientras no se homologue el denominador.
+- Incorporación opcional de una captura nueva del cuadro de competencia de Retail. La captura es específica por marca, categoría, mes y columna; los KPI no observados conservan sus referencias anteriores. El archivo privado esperado es `source/panel-capture-2026-11-25/result.json`.
+- Diferencias sin valor publicado se identifican como «Sin valor publicado para comparar»; se distinguen de una reconstrucción pendiente y de universos no comparables.
+
+La captura recuperada es parcial, corresponde a agua saborizada de octubre y no sustituye agua sin gas. La descarga, las cifras y los registros originales de Retail no se incluyen en este repositorio. Este cambio tampoco publica el sitio.
+
 Esta carpeta conserva el código fuente de la integración del 24/11/2026. Se añade junto al dashboard anterior: no lo reemplaza ni cambia las aplicaciones existentes del repositorio.
 
 ## Cambios incluidos
