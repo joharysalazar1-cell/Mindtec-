@@ -1,0 +1,4 @@
+# Direct pins from PyPI; see ../catalog.json.
+jupyterlab==4.6.6
+ipykernel==7.4.0
+nbconvert==7.17.2

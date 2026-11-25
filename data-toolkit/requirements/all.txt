@@ -1,0 +1,11 @@
+# Optional full toolkit; resolve in an isolated environment first.
+-r core.txt
+-r formats.txt
+-r quality.txt
+-r connectors.txt
+-r statistics.txt
+-r visualization.txt
+-r documents.txt
+-r geo.txt
+-r development.txt
+-r notebooks.txt
