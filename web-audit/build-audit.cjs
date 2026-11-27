@@ -1,0 +1,15 @@
+const fs=require('fs'),zlib=require('zlib'),crypto=require('crypto'),path=require('path');
+const original=zlib.gunzipSync(fs.readFileSync('source/baseline.html.gz'));
+let html=original.toString('utf8');
+const match=html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/);
+const raw=match[1],data=JSON.parse(raw),script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const gzip=s=>zlib.gzipSync(s,{level:9}).toString('base64');
+const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+html=html.replace(match[0],'<script id="data" type="application/json"></script>').replace(/<script>[\s\S]*?<\/script>/,'<script src="/boot.js" defer></script>');
+const sourceSha=sha(original);
+const manifest={schema:'mindtec-dashboard/v1',id:'baseline-2026-11-11',label:'Base conservada · 11/11/2026',sha256:sha(raw),originalHtmlSha256:sourceSha,invoiceSourceSha256:data.refresh.sha256,items:data.currentAudit.items.length,records:data.records.length,source:data.refresh.file,periods:[...new Set(data.currentAudit.items.map(r=>r.Mes))].sort(),builtAt:new Date().toISOString(),repository:'https://github.com/joharysalazar1-cell/Mindtec-',repositoryCommit:fs.readFileSync(path.join(__dirname,'repository-commit.txt'),'utf8').trim(),limits:data.refresh.preserved};
+const assets={'/':{type:'text/html; charset=utf-8',gzip:gzip(html)},'/legacy.js':{type:'text/javascript; charset=utf-8',gzip:gzip(script)},'/boot.js':{type:'text/javascript; charset=utf-8',gzip:gzip(fs.readFileSync('boot.js','utf8'))},'/continuous.js':{type:'text/javascript; charset=utf-8',gzip:gzip(fs.readFileSync('continuous.js','utf8'))},'/api/data/baseline':{type:'application/json; charset=utf-8',gzip:gzip(raw)}};
+fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});
+let worker=fs.readFileSync('audit-worker.mjs','utf8').replace('/*ASSETS*/{}',JSON.stringify(assets)).replace('/*MANIFEST*/{}',JSON.stringify(manifest));
+fs.writeFileSync('dist/server/index.js',worker);fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');fs.writeFileSync('baseline-manifest.json',JSON.stringify(manifest,null,2));
+fs.writeFileSync('legacy.sha256',sha(script));console.log(JSON.stringify({workerBytes:Buffer.byteLength(worker),sourceSha256:sourceSha,items:manifest.items,records:manifest.records}));
