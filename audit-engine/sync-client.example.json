@@ -1,0 +1,1 @@
+{"schema":"mindtec-sync-client/1","enabled":false,"origin":"https://audit.example.org","project_id":"appgprj_REPLACE","outbox_runtime":"C:/MindTEC/private/outbox-runtime","runtime":"C:/MindTEC/private/delivery-runtime","token_env":"MINDTEC_SITE_SERVICE_TOKEN","timeout":30,"max_seconds":120}

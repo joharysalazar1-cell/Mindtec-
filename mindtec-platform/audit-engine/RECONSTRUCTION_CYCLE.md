@@ -1,0 +1,68 @@
+# Coherent local reconstruction cycles
+
+`reconstruction_cycle.py` chains existing reconstruction runners against one observer-accepted Perfect Store execution. `reconstruction_watch.py` polls that accepted local source. Neither module downloads external data, sends messages, uploads evidence or publishes a Site.
+
+Nine stages are retained: declared numeric distribution, shelf share, category cold share, the separately scoped legacy global cold reference, company availability reference, POP, cold conversion, weighted-input readiness, and the integrated projection. These are processing stages, not nine completed official KPI. Weighted distribution remains pending when official weighting rules are missing.
+
+## Profile
+
+The exact `mindtec-reconstruction-cycle/1` profile has `schema`, `version`, absolute `ps_runtime`, absolute `runtime`, absolute `report_dir`, and `inputs`. The profile and all inputs must remain outside output custody and reports. Source, output custody and report directories must be separate.
+
+Each input is an object with an absolute `path` and exact `sha256`. Required input names:
+
+- `shelf_rules`, `cold_rules`;
+- `availability_scope`, `availability_definition`;
+- `pop_scope`, `pop_definition`;
+- `conversion_scope`, `conversion_definition`;
+- `weighted_definition`, `weighted_bindings`.
+
+Questionnaire observations referenced by the rules, including the explicit POP absence decision, are checked by hash and retained. Updating a rule means preparing and verifying a new version of the relevant input, not automatically accepting whatever changed on disk.
+
+On Windows, use a short private custody path, for example `C:/MindTEC-private/cycle`, to leave room for context and content hashes. The profile rejects paths that would exceed the Windows object-link path limit before running stages. Keep reports in the selected project report directory.
+
+## Run once or observe
+
+From the audit-engine directory:
+
+```powershell
+python reconstruction_cycle.py --profile private/reconstruction-profile.json
+python reconstruction_watch.py --profile private/reconstruction-profile.json --interval 60
+```
+
+For a bounded local verification:
+
+```powershell
+python reconstruction_watch.py --profile private/reconstruction-profile.json --interval 60 --iterations 2
+python -m unittest test_reconstruction_cycle test_reconstruction_watch -q
+```
+
+The unbounded observer continues only while its process is running. Durable supervision uses a configured supervisor job; creating a profile or successfully running one cycle alone does not install a service. A bounded observer explicitly marks its health file `stopped` when it exits, preserving the last poll status and accepted result.
+
+## Acceptance and recovery
+
+Every stage must use the selected PS run and snapshot. The source is checked again after computation and report export. Profile or loaded-dependency changes prevent acceptance. A cycle-level lock serializes manual and observer executions; another lock prevents duplicate observers.
+
+Stages are isolated under a hash of source execution, pinned profile and implementation. A failed or interrupted context is not promoted into a completed cycle. Existing accepted cycles remain intact. Recovery can reuse independently retained stage acceptances; a report left by an interrupted attempt is preserved rather than overwritten.
+
+The accepted manifest retains stage results, executions, profile, implementation, source evidence references and HTML. Verification checks each exact stage execution, its custody, result bytes and the retained report. Missing stage custody is rejected without recreating it. An unchanged context reuses a verified acceptance instead of creating duplicate runs and reports.
+
+The observer reports an incompatible source or rule as degraded and preserves its last accepted reference. It does not claim that the old result represents the new cut. Rejections retain their profile bytes and are deduplicated. Human review files, exclusion policies, original answers and official KPI requirements remain separate.
+
+Source-bound questionnaire rules deliberately fail when a new source no longer matches them. Revalidate applicability and prepare a coherent new profile before using those rules for another cut; do not merely replace the SHA without examining the source.
+
+## Scope
+
+Local custody verification establishes reproducibility and provenance, not field truth, official-version equivalence, city-wide sampling confidence or fraud. A new local HTML is not automatically the published dashboard. Missing values and unresolved official rules remain visible.
+
+
+## Supervisor integration
+
+A supervisor job of kind `reconstruction` requires absolute `profile`, `runtime` and `ps_runtime`, plus a unique `name` and an `interval` of at least 60 seconds. The selected profile must use those exact source and custody paths. Its reports must remain separate from all supervised custody and other report directories. Exactly one configured `perfect_store` observer must own the selected source.
+
+The supervisor launches only the fixed `reconstruction_watch.py` script with profile and interval. It waits for fresh, owned Perfect Store health with verified custody before first launch. A stale or borrowed health file does not authorize a launch, and health never authorizes killing a process. Exited children restart through the supervisor's owned process handles and backoff. A running but degraded child is not killed merely because its calculation takes time or its rules require attention.
+
+The supervisor health projection includes cycle state, custody verification, completed stages and report path, with `network_delivery: false`. After changing shared loaded code, stop and restart all affected observers in a controlled release; preserve the last accepted snapshots and existing scheduled-task definition. Startup/recovery is limited to the machine and session conditions of that configured task; this is not an always-on external service.
+
+## Legacy global cold reference
+
+Since reconstruction-cycle/1.1.0, `cold_legacy_stage.py` derives a separate reference from the retained category-cold source and its exact detailed workbook. Each used cell and header is checked against the original; the accepted reference retains both sources, execution evidence and the calculation bundle. The stage binds to the same Perfect Store run and snapshot as every other stage. Its standalone verifier recomputes the result. No category attribution, annual comparison or external publication is inferred. An input with no legacy visits yields no invented reference rows.
