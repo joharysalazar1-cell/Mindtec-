@@ -1,0 +1,29 @@
+name: MindTEC audit - synthetic checks
+
+on:
+  pull_request:
+    paths:
+      - "dashboard-html/**"
+      - ".github/workflows/mindtec-audit-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Compile all Python scripts
+        run: python -m compileall -q dashboard-html
+      - name: Test month selection and API with synthetic inputs
+        run: python -m unittest discover -s dashboard-html -p "test_*.py" -v
+      - name: Verify dashboard JavaScript syntax and private-data exclusions
+        run: node dashboard-html/test-source.cjs

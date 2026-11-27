@@ -4,6 +4,7 @@ HERE=Path(__file__).resolve().parent
 parser=argparse.ArgumentParser(description='Build a local MindTEC HTML dashboard from private audit inputs.')
 parser.add_argument('--data-dir',type=Path,required=True,help='Private audit workspace, never uploaded to GitHub')
 parser.add_argument('--output-dir',type=Path,default=HERE/'dist')
+parser.add_argument('--perfect-store-cut',default='2026-11-13',help='Corte opcional de Perfect Store YYYY-MM-DD')
 args=parser.parse_args();p=args.data_dir.resolve();output=args.output_dir.resolve();output.mkdir(parents=True,exist_ok=True)
 required=[p/'executive-data.json',p/'MindTEC_KPI_originales_restaurados.html',p/'Exportacion_KPI_disponibles_2026-11-12'/'resultados_12_KPI.json']
 for f in required:
@@ -69,7 +70,7 @@ s=s.replace('</style>',' .trace-flow{display:flex;flex-wrap:wrap;gap:8px;margin:
 s=s.replace('</style>','.period-delta-row{display:grid;grid-template-columns:140px minmax(0,1fr) 85px;gap:12px;align-items:center;margin:10px 0;font-size:12px}.period-delta-track{height:14px;position:relative;background:linear-gradient(to right,#edf1f8 49.8%,#8a98ae 49.8%,#8a98ae 50.2%,#edf1f8 50.2%);border-radius:3px}.period-delta-track i{position:absolute;top:2px;height:10px;border-radius:3px}#stats-trend{margin-top:22px}@media(max-width:600px){.period-delta-row{grid-template-columns:95px minmax(0,1fr) 65px}} </style>',1)
 s=s.replace('<div id="stats" class="cards"></div>','<div id="stats" class="cards"></div><section class="card" id="source-presence"></section><input id="source-sku" type="hidden" value="">')
 from perfect_store_integration import integrate_perfect_store
-s=integrate_perfect_store(s,d,p)
+s=integrate_perfect_store(s,d,p,args.perfect_store_cut)
 payload=json.dumps(d,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c')
 script=(HERE/'executive.js').read_text(encoding='utf-8')+'\n'+(HERE/'visual.js').read_text(encoding='utf-8')+'\n'+(HERE/'trace-visual.js').read_text(encoding='utf-8')
 script+='\n'+(HERE/'statistics-core.js').read_text(encoding='utf-8')+'\n'+(HERE/'statistics-visual.js').read_text(encoding='utf-8')
